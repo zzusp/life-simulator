@@ -1,0 +1,731 @@
+openapi: 3.0.3
+info:
+  title: 人生模拟器游戏 API
+  description: 基于AI的人生模拟器游戏后端API
+  version: 1.0.0
+  contact:
+    name: 开发团队
+    email: dev@life-simulator.com
+
+servers:
+  - url: https://api.life-simulator.com/v1
+    description: 生产环境
+  - url: https://staging-api.life-simulator.com/v1
+    description: 测试环境
+
+paths:
+  # 游戏核心API
+  /life-types:
+    get:
+      summary: 获取人生类型列表
+      description: 获取所有可用的生命类型
+      tags:
+        - 游戏核心
+      responses:
+        '200':
+          description: 成功获取人生类型列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LifeType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /game/start:
+    post:
+      summary: 开始新游戏
+      description: 创建新的游戏会话
+      tags:
+        - 游戏核心
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - lifeTypeId
+              properties:
+                lifeTypeId:
+                  type: string
+                  format: uuid
+                  description: 人生类型ID
+      responses:
+        '201':
+          description: 游戏会话创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/GameSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /game/{sessionId}/scene:
+    get:
+      summary: 获取当前场景
+      description: 获取游戏会话的当前场景信息
+      tags:
+        - 游戏核心
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 游戏会话ID
+      responses:
+        '200':
+          description: 成功获取场景信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SceneNode'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /game/{sessionId}/choice:
+    post:
+      summary: 做出选择
+      description: 玩家在场景中做出选择
+      tags:
+        - 游戏核心
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 游戏会话ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - choiceIndex
+              properties:
+                choiceIndex:
+                  type: integer
+                  minimum: 0
+                  maximum: 4
+                  description: 选择索引
+      responses:
+        '200':
+          description: 选择处理成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      newScore:
+                        type: integer
+                        description: 新分数
+                      reasoning:
+                        type: string
+                        description: 理由摘要
+                      nextScene:
+                        $ref: '#/components/schemas/SceneNode'
+                      gameState:
+                        type: string
+                        enum: [playing, completed, abandoned]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # 成就系统API
+  /achievements:
+    get:
+      summary: 获取成就列表
+      description: 获取所有可用成就
+      tags:
+        - 成就系统
+      responses:
+        '200':
+          description: 成功获取成就列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Achievement'
+
+  /game/{sessionId}/achievements:
+    get:
+      summary: 获取会话成就
+      description: 获取游戏会话中解锁的成就
+      tags:
+        - 成就系统
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 游戏会话ID
+      responses:
+        '200':
+          description: 成功获取会话成就
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SessionAchievement'
+
+  # 排行榜API
+  /leaderboards/{lifeTypeId}:
+    get:
+      summary: 获取排行榜
+      description: 获取指定人生类型的排行榜
+      tags:
+        - 社交功能
+      parameters:
+        - name: lifeTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: 人生类型ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+          description: 返回数量限制
+      responses:
+        '200':
+          description: 成功获取排行榜
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+
+  # 分享功能API
+  /game/{sessionId}/share:
+    post:
+      summary: 分享游戏结果
+      description: 创建游戏结果的分享链接
+      tags:
+        - 社交功能
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 游戏会话ID
+      responses:
+        '201':
+          description: 分享链接创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      shareToken:
+                        type: string
+                        description: 分享令牌
+                      shareUrl:
+                        type: string
+                        format: uri
+                        description: 分享链接
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        description: 过期时间
+
+  /shared/{shareToken}:
+    get:
+      summary: 查看分享结果
+      description: 通过分享令牌查看游戏结果
+      tags:
+        - 社交功能
+      parameters:
+        - name: shareToken
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 分享令牌
+      responses:
+        '200':
+          description: 成功获取分享结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SharedResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # 管理员API
+  /admin/life-types:
+    get:
+      summary: 获取人生类型管理列表
+      description: 管理员获取人生类型列表（包含未启用的）
+      tags:
+        - 管理员
+      security:
+        - AdminAuth: []
+      responses:
+        '200':
+          description: 成功获取管理列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LifeType'
+
+    post:
+      summary: 创建人生类型
+      description: 管理员创建新的人生类型
+      tags:
+        - 管理员
+      security:
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifeTypeCreate'
+      responses:
+        '201':
+          description: 人生类型创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/LifeType'
+
+  /admin/life-types/{lifeTypeId}:
+    put:
+      summary: 更新人生类型
+      description: 管理员更新人生类型信息
+      tags:
+        - 管理员
+      security:
+        - AdminAuth: []
+      parameters:
+        - name: lifeTypeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: 人生类型ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifeTypeUpdate'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/LifeType'
+
+components:
+  schemas:
+    LifeType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        worldviewPrompt:
+          type: string
+        initialIdentity:
+          type: string
+        resources:
+          type: object
+        constraints:
+          type: object
+        mainGoals:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LifeTypeCreate:
+      type: object
+      required:
+        - name
+        - description
+        - worldviewPrompt
+        - initialIdentity
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        worldviewPrompt:
+          type: string
+        initialIdentity:
+          type: string
+        resources:
+          type: object
+        constraints:
+          type: object
+        mainGoals:
+          type: array
+          items:
+            type: string
+
+    LifeTypeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        worldviewPrompt:
+          type: string
+        initialIdentity:
+          type: string
+        resources:
+          type: object
+        constraints:
+          type: object
+        mainGoals:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
+    GameSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+        lifeTypeId:
+          type: string
+          format: uuid
+        currentScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        gameState:
+          type: string
+          enum: [playing, completed, abandoned]
+        currentSceneId:
+          type: string
+          format: uuid
+        choicesMade:
+          type: array
+          items:
+            type: object
+        achievementsUnlocked:
+          type: array
+          items:
+            type: string
+            format: uuid
+        startedAt:
+          type: string
+          format: date-time
+        lastActivityAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    SceneNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        lifeTypeId:
+          type: string
+          format: uuid
+        sceneNumber:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        aiGeneratedContent:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              scoreImpact:
+                type: integer
+              reasoning:
+                type: string
+        nextSceneRules:
+          type: object
+        isEndingScene:
+          type: boolean
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Achievement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        iconUrl:
+          type: string
+          format: uri
+        unlockConditions:
+          type: object
+        rewardType:
+          type: string
+          enum: [badge, title, unlock_content]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    SessionAchievement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+        achievementId:
+          type: string
+          format: uuid
+        unlockedAt:
+          type: string
+          format: date-time
+        progressData:
+          type: object
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        sessionId:
+          type: string
+        score:
+          type: integer
+        gameDuration:
+          type: integer
+        achievementsCount:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+
+    SharedResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+        shareToken:
+          type: string
+        shareContent:
+          type: object
+        viewCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: 'INVALID_REQUEST'
+              message: '请求参数无效'
+              details: {}
+
+    NotFound:
+      description: 资源未找到
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: 'NOT_FOUND'
+              message: '请求的资源不存在'
+              details: {}
+
+    InternalServerError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: 'INTERNAL_ERROR'
+              message: '服务器内部错误'
+              details: {}
+
+  securitySchemes:
+    AdminAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 管理员认证令牌
+
+tags:
+  - name: 游戏核心
+    description: 游戏核心功能API
+  - name: 成就系统
+    description: 成就系统相关API
+  - name: 社交功能
+    description: 社交功能相关API
+  - name: 管理员
+    description: 管理员功能API
