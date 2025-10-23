@@ -1,0 +1,30 @@
+# life-simulator Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-10-23
+
+## Active Technologies
+
+- Node.js 20.x (LTS), TypeScript 5.x, React 18.x, Vite 5.x + Next.js 15.x, Supabase, OpenAI API, Docker, GitHub Actions (001-life-simulator-game)
+
+## Project Structure
+
+```text
+backend/
+frontend/
+tests/
+```
+
+## Commands
+
+npm test; npm run lint
+
+## Code Style
+
+Node.js 20.x (LTS), TypeScript 5.x, React 18.x, Vite 5.x: Follow standard conventions
+
+## Recent Changes
+
+- 001-life-simulator-game: Added Node.js 20.x (LTS), TypeScript 5.x, React 18.x, Vite 5.x + Next.js 15.x, Supabase, OpenAI API, Docker, GitHub Actions
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
