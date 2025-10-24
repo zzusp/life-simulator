@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, supabaseAdmin } from './supabase'
 import { aiService } from './ai'
 import { moderator } from './moderator'
 import { GameSession, SceneNode, LifeType, Choice, PlayerChoice } from '@/types/game'
@@ -21,34 +21,49 @@ export class GameEngine {
   async startGame(lifeTypeId: string): Promise<GameSession> {
     try {
       // 获取人生类型信息
-      const { data: lifeType, error: lifeTypeError } = await supabase
+      const { data: lifeTypeData, error: lifeTypeError } = await supabase
         .from('life_types')
         .select('*')
         .eq('id', lifeTypeId)
         .eq('is_active', true)
         .single()
 
-      if (lifeTypeError || !lifeType) {
+      if (lifeTypeError || !lifeTypeData) {
         throw new Error('人生类型不存在或已禁用')
+      }
+
+      // 转换数据库字段名为前端期望的格式
+      const lifeType: LifeType = {
+        id: lifeTypeData.id,
+        name: lifeTypeData.name,
+        description: lifeTypeData.description,
+        worldviewPrompt: lifeTypeData.worldview_prompt,
+        initialIdentity: lifeTypeData.initial_identity,
+        resources: lifeTypeData.resources,
+        constraints: lifeTypeData.constraints,
+        mainGoals: lifeTypeData.main_goals || [], // 确保是数组
+        isActive: lifeTypeData.is_active,
+        version: lifeTypeData.version,
+        createdAt: lifeTypeData.created_at,
+        updatedAt: lifeTypeData.updated_at
       }
 
       // 创建游戏会话
       const sessionId = generateSessionId()
-      const gameSession: GameSession = {
-        id: '', // 将在数据库插入后设置
-        sessionId,
-        lifeTypeId,
-        currentScore: 50,
-        gameState: 'playing',
-        currentSceneId: null,
-        choicesMade: [],
-        achievementsUnlocked: [],
-        startedAt: new Date().toISOString(),
-        lastActivityAt: new Date().toISOString(),
-        completedAt: null
+      const gameSession = {
+        session_id: sessionId,
+        life_type_id: lifeTypeId,
+        current_score: 50,
+        game_state: 'playing',
+        current_scene_id: null,
+        choices_made: [],
+        achievements_unlocked: [],
+        started_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString(),
+        completed_at: null
       }
 
-      // 保存到数据库
+      // 保存到数据库（匿名用户可以创建游戏会话）
       const { data: sessionData, error: sessionError } = await supabase
         .from('game_sessions')
         .insert(gameSession)
@@ -62,15 +77,25 @@ export class GameEngine {
       // 生成初始场景
       const initialScene = await this.generateInitialScene(lifeType, sessionData.id)
       
-      // 更新会话的当前场景
+      // 更新会话的当前场景（匿名用户可以更新自己的游戏会话）
       await supabase
         .from('game_sessions')
         .update({ current_scene_id: initialScene.id })
         .eq('id', sessionData.id)
 
+      // 转换数据库字段名为前端期望的格式
       return {
-        ...sessionData,
-        currentSceneId: initialScene.id
+        id: sessionData.id,
+        sessionId: sessionData.session_id,
+        lifeTypeId: sessionData.life_type_id,
+        currentScore: sessionData.current_score,
+        gameState: sessionData.game_state,
+        currentSceneId: initialScene.id,
+        choicesMade: sessionData.choices_made || [],
+        achievementsUnlocked: sessionData.achievements_unlocked || [],
+        startedAt: sessionData.started_at,
+        lastActivityAt: sessionData.last_activity_at,
+        completedAt: sessionData.completed_at
       }
     } catch (error) {
       console.error('开始游戏失败:', error)
@@ -81,6 +106,41 @@ export class GameEngine {
   // 生成初始场景
   private async generateInitialScene(lifeType: LifeType, sessionId: string): Promise<SceneNode> {
     try {
+      // 首先检查是否已存在该人生类型的初始场景
+      const { data: existingScene, error: queryError } = await supabase
+        .from('scene_nodes')
+        .select('*')
+        .eq('life_type_id', lifeType.id)
+        .eq('scene_number', 1)
+        .single()
+
+      if (queryError && queryError.code !== 'PGRST116') { // PGRST116 = 没有找到记录
+        console.error('查询现有场景失败:', queryError)
+        throw new Error('查询现有场景失败')
+      }
+
+      // 如果已存在初始场景，直接返回
+      if (existingScene) {
+        console.log('使用现有初始场景:', existingScene.id)
+        return {
+          id: existingScene.id,
+          lifeTypeId: existingScene.life_type_id,
+          sceneNumber: existingScene.scene_number,
+          title: existingScene.title,
+          description: existingScene.description,
+          aiGeneratedContent: existingScene.ai_generated_content,
+          choices: existingScene.choices,
+          nextSceneRules: existingScene.next_scene_rules,
+          isEndingScene: existingScene.is_ending_scene,
+          version: existingScene.version,
+          createdAt: existingScene.created_at,
+          updatedAt: existingScene.updated_at
+        }
+      }
+
+      // 如果不存在，则创建新的初始场景
+      console.log('创建新的初始场景')
+      
       // 构建AI提示词
       const prompt = `你是一个专业的游戏情节设计师。请为以下人生类型生成初始场景：
 
@@ -91,7 +151,26 @@ export class GameEngine {
 限制：${JSON.stringify(lifeType.constraints)}
 主要目标：${lifeType.mainGoals.join(', ')}
 
-请生成一个引人入胜的初始场景，包含场景描述和3-5个选择选项。每个选项应该有不同的分数影响。`
+请生成一个引人入胜的初始场景，包含场景描述和3-5个选择选项。
+
+要求：
+- 场景描述：控制在150-300字以内
+- 每个选择选项：控制在20-50字以内，要具体、有意义
+- 选择选项应该结合剧情场景，给出具体的行动方案
+- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇
+- 每个选项都应该结合当前场景，给出明确的行动描述
+- 不要显示分值，让玩家根据具体情况判断
+- 确保内容简洁明了，便于玩家快速理解
+
+请按以下格式输出：
+场景描述：[你的场景描述]
+
+选择选项：
+1. [具体行动选项1]
+2. [具体行动选项2]
+3. [具体行动选项3]
+4. [具体行动选项4]
+5. [具体行动选项5]`
 
       // 使用AI生成场景
       const aiResponse = await aiService.generateScene(prompt, {
@@ -107,22 +186,19 @@ export class GameEngine {
       }
 
       // 创建场景节点
-      const sceneNode: SceneNode = {
-        id: '', // 将在数据库插入后设置
-        lifeTypeId: lifeType.id,
-        sceneNumber: 1,
+      const sceneNode = {
+        life_type_id: lifeType.id,
+        scene_number: 1,
         title: '游戏开始',
         description: aiResponse.content,
-        aiGeneratedContent: aiResponse.content,
+        ai_generated_content: aiResponse.content,
         choices: aiResponse.choices,
-        nextSceneRules: {},
-        isEndingScene: false,
-        version: 1,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        next_scene_rules: {},
+        is_ending_scene: false,
+        version: 1
       }
 
-      // 保存到数据库
+      // 保存到数据库（匿名用户可以创建场景节点）
       const { data: sceneData, error: sceneError } = await supabase
         .from('scene_nodes')
         .insert(sceneNode)
@@ -130,10 +206,25 @@ export class GameEngine {
         .single()
 
       if (sceneError) {
-        throw new Error('保存场景失败')
+        console.error('保存场景失败:', sceneError)
+        throw new Error(`保存场景失败: ${sceneError.message || '未知错误'}`)
       }
 
-      return sceneData
+      // 转换数据库字段名为前端期望的格式
+      return {
+        id: sceneData.id,
+        lifeTypeId: sceneData.life_type_id,
+        sceneNumber: sceneData.scene_number,
+        title: sceneData.title,
+        description: sceneData.description,
+        aiGeneratedContent: sceneData.ai_generated_content,
+        choices: sceneData.choices,
+        nextSceneRules: sceneData.next_scene_rules,
+        isEndingScene: sceneData.is_ending_scene,
+        version: sceneData.version,
+        createdAt: sceneData.created_at,
+        updatedAt: sceneData.updated_at
+      }
     } catch (error) {
       console.error('生成初始场景失败:', error)
       throw error
@@ -278,19 +369,42 @@ export class GameEngine {
   // 生成下一个场景
   private async generateNextScene(currentScene: SceneNode, currentScore: number, lifeTypeId: string): Promise<SceneNode> {
     try {
+      // 确保场景编号有效
+      const currentSceneNumber = currentScene.sceneNumber || 1
+      const nextSceneNumber = currentSceneNumber + 1
+      
       // 构建AI提示词
       const prompt = `你是一个专业的游戏情节设计师。请根据以下信息生成下一个场景：
 
 当前场景：${currentScene.description}
 当前分数：${currentScore}
-场景编号：${currentScene.sceneNumber + 1}
+场景编号：${nextSceneNumber}
 
-请生成一个符合游戏主题的新场景，包含场景描述和3-5个选择选项。每个选项应该有不同的分数影响。`
+请生成一个符合游戏主题的新场景，包含场景描述和3-5个选择选项。
+
+要求：
+- 场景描述：控制在150-300字以内
+- 每个选择选项：控制在20-50字以内，要具体、有意义
+- 选择选项应该结合剧情场景，给出具体的行动方案
+- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇
+- 每个选项都应该结合当前场景，给出明确的行动描述
+- 不要显示分值，让玩家根据具体情况判断
+- 确保内容简洁明了，便于玩家快速理解
+
+请按以下格式输出：
+场景描述：[你的场景描述]
+
+选择选项：
+1. [具体行动选项1]
+2. [具体行动选项2]
+3. [具体行动选项3]
+4. [具体行动选项4]
+5. [具体行动选项5]`
 
       // 使用AI生成场景
       const aiResponse = await aiService.generateScene(prompt, {
         currentScore,
-        sceneNumber: currentScene.sceneNumber + 1
+        sceneNumber: nextSceneNumber
       })
 
       // 内容审核
@@ -299,20 +413,46 @@ export class GameEngine {
         throw new Error('生成的内容包含不当信息')
       }
 
-      // 创建场景节点
-      const sceneNode: SceneNode = {
-        id: '', // 将在数据库插入后设置
-        lifeTypeId,
-        sceneNumber: currentScene.sceneNumber + 1,
-        title: `场景 ${currentScene.sceneNumber + 1}`,
+      // 为后续场景使用唯一的场景编号，避免冲突
+      // 使用重试机制确保唯一性
+      let uniqueSceneNumber: number
+      let attempts = 0
+      const maxAttempts = 10
+      
+      do {
+        const timestamp = Date.now()
+        const randomSuffix = Math.floor(Math.random() * 10000)
+        uniqueSceneNumber = nextSceneNumber * 100000 + timestamp % 100000 + randomSuffix
+        
+        // 检查是否已存在相同的场景编号
+        const { data: existingScene } = await supabase
+          .from('scene_nodes')
+          .select('id')
+          .eq('life_type_id', lifeTypeId)
+          .eq('scene_number', uniqueSceneNumber)
+          .single()
+        
+        if (!existingScene) {
+          break // 找到了唯一的场景编号
+        }
+        
+        attempts++
+        if (attempts >= maxAttempts) {
+          throw new Error('无法生成唯一的场景编号')
+        }
+      } while (attempts < maxAttempts)
+
+      // 创建场景节点（使用数据库字段名）
+      const sceneNode = {
+        life_type_id: lifeTypeId,
+        scene_number: uniqueSceneNumber,
+        title: `场景 ${nextSceneNumber}`,
         description: aiResponse.content,
-        aiGeneratedContent: aiResponse.content,
+        ai_generated_content: aiResponse.content,
         choices: aiResponse.choices,
-        nextSceneRules: {},
-        isEndingScene: false,
-        version: 1,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        next_scene_rules: {},
+        is_ending_scene: false,
+        version: 1
       }
 
       // 保存到数据库
@@ -323,10 +463,25 @@ export class GameEngine {
         .single()
 
       if (sceneError) {
-        throw new Error('保存场景失败')
+        console.error('保存场景失败:', sceneError)
+        throw new Error(`保存场景失败: ${sceneError.message || '未知错误'}`)
       }
 
-      return sceneData
+      // 转换数据库字段名为前端期望的格式
+      return {
+        id: sceneData.id,
+        lifeTypeId: sceneData.life_type_id,
+        sceneNumber: nextSceneNumber, // 返回逻辑场景编号
+        title: sceneData.title,
+        description: sceneData.description,
+        aiGeneratedContent: sceneData.ai_generated_content,
+        choices: sceneData.choices,
+        nextSceneRules: sceneData.next_scene_rules,
+        isEndingScene: sceneData.is_ending_scene,
+        version: sceneData.version,
+        createdAt: sceneData.created_at,
+        updatedAt: sceneData.updated_at
+      }
     } catch (error) {
       console.error('生成下一个场景失败:', error)
       throw error
@@ -346,7 +501,20 @@ export class GameEngine {
         return null
       }
 
-      return data
+      // 转换数据库字段名为前端期望的格式
+      return {
+        id: data.id,
+        sessionId: data.session_id,
+        lifeTypeId: data.life_type_id,
+        currentScore: data.current_score,
+        gameState: data.game_state,
+        currentSceneId: data.current_scene_id,
+        choicesMade: data.choices_made || [],
+        achievementsUnlocked: data.achievements_unlocked || [],
+        startedAt: data.started_at,
+        lastActivityAt: data.last_activity_at,
+        completedAt: data.completed_at
+      }
     } catch (error) {
       console.error('获取游戏会话失败:', error)
       return null
@@ -371,7 +539,21 @@ export class GameEngine {
         return null
       }
 
-      return data
+      // 转换数据库字段名为前端期望的格式
+      return {
+        id: data.id,
+        lifeTypeId: data.life_type_id,
+        sceneNumber: data.scene_number,
+        title: data.title,
+        description: data.description,
+        aiGeneratedContent: data.ai_generated_content,
+        choices: data.choices,
+        nextSceneRules: data.next_scene_rules,
+        isEndingScene: data.is_ending_scene,
+        version: data.version,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      }
     } catch (error) {
       console.error('获取当前场景失败:', error)
       return null
@@ -430,18 +612,28 @@ export class GameEngine {
         return false // 已经解锁
       }
 
-      // 根据成就条件评估
-      switch (achievement.id) {
-        case 'first-choice':
-          return session.choices_made.length >= 1
-        case 'high-score':
-          return newScore >= 80
-        case 'low-score':
-          return newScore <= 20
-        case 'long-game':
-          return currentScene.sceneNumber >= 10
-        case 'perfect-game':
-          return newScore >= 100
+      // 根据数据库中的成就条件评估
+      const conditions = achievement.unlock_conditions
+      if (!conditions || typeof conditions !== 'object') {
+        return false
+      }
+
+      // 根据成就类型评估条件
+      switch (conditions.type) {
+        case 'first_game':
+          return session.choices_made && session.choices_made.length >= 1
+        case 'high_score':
+          return newScore >= (conditions.score || 80)
+        case 'perfect_score':
+          return newScore >= (conditions.score || 100)
+        case 'multiple_life_types':
+          // 这里需要查询用户玩过的人生类型数量
+          // 暂时返回false，需要实现用户历史查询
+          return false
+        case 'consecutive_games':
+          // 这里需要查询用户连续游戏次数
+          // 暂时返回false，需要实现用户历史查询
+          return false
         default:
           return false
       }

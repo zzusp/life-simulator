@@ -9,6 +9,7 @@ export const config = {
   // AI配置
   ai: {
     model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+    baseURL: process.env.OPENAI_BASE_URL || undefined,
     maxTokens: 1000,
     temperature: 0.8,
     timeout: 30000,
@@ -59,6 +60,7 @@ export const isTest = process.env.NODE_ENV === 'test'
 // 功能开关
 export const features = {
   enableAI: !!process.env.OPENAI_API_KEY,
+  enableCustomOpenAI: !!process.env.OPENAI_BASE_URL,
   enableSupabase: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
   enableAnalytics: isProduction,
   enableErrorReporting: isProduction,
@@ -80,6 +82,15 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
 
   if (!process.env.OPENAI_API_KEY) {
     errors.push('OPENAI_API_KEY is required')
+  }
+
+  // OPENAI_BASE_URL 是可选的，如果设置了需要验证格式
+  if (process.env.OPENAI_BASE_URL) {
+    try {
+      new URL(process.env.OPENAI_BASE_URL)
+    } catch {
+      errors.push('OPENAI_BASE_URL must be a valid URL')
+    }
   }
 
   return {
