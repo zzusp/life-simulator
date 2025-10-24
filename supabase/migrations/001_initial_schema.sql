@@ -204,7 +204,7 @@ CREATE POLICY "game_sessions_delete_policy" ON game_sessions FOR DELETE USING (f
 
 -- 场景节点：所有人可读
 CREATE POLICY "scene_nodes_select_policy" ON scene_nodes FOR SELECT USING (true);
-CREATE POLICY "scene_nodes_insert_policy" ON scene_nodes FOR INSERT WITH CHECK (false); -- 仅管理员
+CREATE POLICY "scene_nodes_insert_policy" ON scene_nodes FOR INSERT WITH CHECK (true); -- 允许匿名用户创建场景节点
 CREATE POLICY "scene_nodes_update_policy" ON scene_nodes FOR UPDATE USING (false); -- 仅管理员
 CREATE POLICY "scene_nodes_delete_policy" ON scene_nodes FOR DELETE USING (false); -- 仅管理员
 
@@ -252,9 +252,9 @@ CREATE POLICY "audit_logs_delete_policy" ON audit_logs FOR DELETE USING (false);
 
 -- 插入初始数据
 INSERT INTO life_types (name, description, worldview_prompt, initial_identity, resources, constraints, main_goals) VALUES
-('创业人生', '体验从零开始的创业历程，面对各种挑战和机遇', '你是一个充满激情的创业者，拥有无限的想象力和执行力。', '你是一名刚毕业的大学生，怀揣着改变世界的梦想，准备开始你的创业之旅。', '{"资金": 10000, "人脉": 5, "技能": ["编程", "市场分析"]}', '{"时间": "5年", "风险": "高"}', '["获得第一笔投资", "建立稳定团队", "实现盈利"]'),
-('修真人生', '踏上修仙之路，追求长生不老和超凡脱俗', '你是一个有灵根的凡人，踏上了修仙之路，追求长生不老和超凡脱俗。', '你是一个普通的山村少年，在一次意外中发现了自己的灵根，从此踏上了修仙之路。', '{"灵石": 100, "功法": "基础吐纳术", "法器": "无"}', '{"境界": "炼气期", "寿命": "100年"}', '["突破筑基期", "获得高级功法", "建立修仙门派"]'),
-('穿越古代人生', '穿越到古代，体验不同的历史时期和文化', '你是一个现代人，意外穿越到了古代，需要适应古代的生活和文化。', '你是一个现代大学生，在一次意外中穿越到了古代，成为了一个普通的农家子弟。', '{"银两": 50, "知识": "现代知识", "物品": "无"}', '{"时代": "明朝", "身份": "平民"}', '["适应古代生活", "利用现代知识", "改变历史进程"]');
+('创业人生', '体验从零开始的创业历程，面对各种挑战和机遇', '你是一个充满激情的创业者，拥有无限的想象力和执行力。', '你是一名刚毕业的大学生，怀揣着改变世界的梦想，准备开始你的创业之旅。', '{"资金": 10000, "人脉": 5, "技能": ["编程", "市场分析"]}', '{"时间": "5年", "风险": "高"}', ARRAY['获得第一笔投资', '建立稳定团队', '实现盈利']),
+('修真人生', '踏上修仙之路，追求长生不老和超凡脱俗', '你是一个有灵根的凡人，踏上了修仙之路，追求长生不老和超凡脱俗。', '你是一个普通的山村少年，在一次意外中发现了自己的灵根，从此踏上了修仙之路。', '{"灵石": 100, "功法": "基础吐纳术", "法器": "无"}', '{"境界": "炼气期", "寿命": "100年"}', ARRAY['突破筑基期', '获得高级功法', '建立修仙门派']),
+('穿越古代人生', '穿越到古代，体验不同的历史时期和文化', '你是一个现代人，意外穿越到了古代，需要适应古代的生活和文化。', '你是一个现代大学生，在一次意外中穿越到了古代，成为了一个普通的农家子弟。', '{"银两": 50, "知识": "现代知识", "物品": "无"}', '{"时代": "明朝", "身份": "平民"}', ARRAY['适应古代生活', '利用现代知识', '改变历史进程']);
 
 -- 插入初始成就
 INSERT INTO achievements (name, description, unlock_conditions, reward_type) VALUES
@@ -266,7 +266,7 @@ INSERT INTO achievements (name, description, unlock_conditions, reward_type) VAL
 
 -- 插入初始AI提示词
 INSERT INTO ai_prompts (name, prompt_type, content, variables) VALUES
-('场景生成', 'scene_generation', '你是一个专业的游戏情节设计师。请根据以下信息生成一个游戏场景：\n\n人生类型：{lifeType}\n当前分数：{currentScore}\n场景编号：{sceneNumber}\n\n请生成一个符合主题的场景描述，包含3-5个选择选项。每个选项应该有不同的分数影响。', '{"lifeType": "string", "currentScore": "number", "sceneNumber": "number"}'),
-('选择生成', 'choice_generation', '你是一个专业的游戏设计师。请为以下场景生成选择选项：\n\n场景描述：{sceneDescription}\n当前分数：{currentScore}\n\n请生成3-5个选择选项，每个选项应该有不同的分数影响和理由。', '{"sceneDescription": "string", "currentScore": "number"}'),
-('推理分析', 'reasoning', '你是一个专业的游戏分析师。请分析以下选择的影响：\n\n选择：{choice}\n当前分数：{currentScore}\n场景：{sceneDescription}\n\n请分析这个选择对游戏进程的影响，并给出分数变化的理由。', '{"choice": "string", "currentScore": "number", "sceneDescription": "string"}'),
-('内容审核', 'moderation', '请审核以下内容是否适合游戏使用：\n\n内容：{content}\n\n请检查是否包含不当内容，如暴力、色情、仇恨言论等。', '{"content": "string"}');
+('场景生成', 'scene_generation', '你是一个专业的游戏情节设计师。请根据以下信息生成一个游戏场景：\n\n人生类型：{lifeType}\n当前分数：{currentScore}\n场景编号：{sceneNumber}\n\n请生成一个符合主题的场景描述，包含3-5个选择选项。\n\n要求：\n- 场景描述：控制在150-300字以内\n- 每个选择选项：控制在20-50字以内，要具体、有意义\n- 选择选项应该反映真实的人生决策，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该有明确的行动描述，如"直接申请这个职位"、"先做兼职积累经验"等\n- 不要显示分值，让玩家根据具体情况判断\n- 确保内容简洁明了，便于玩家快速理解', '{"lifeType": "string", "currentScore": "number", "sceneNumber": "number"}'),
+('选择生成', 'choice_generation', '你是一个专业的游戏设计师。请为以下场景生成选择选项：\n\n场景描述：{sceneDescription}\n当前分数：{currentScore}\n\n请生成3-5个选择选项。\n\n要求：\n- 每个选择选项：控制在20-50字以内，要具体、有意义\n- 选择选项应该反映真实的人生决策，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该有明确的行动描述，如"直接申请这个职位"、"先做兼职积累经验"等\n- 不要显示分值，让玩家根据具体情况判断\n- 确保选项简洁明了，便于玩家快速决策', '{"sceneDescription": "string", "currentScore": "number"}'),
+('推理分析', 'reasoning', '你是一个专业的游戏分析师。请分析以下选择的影响：\n\n选择：{choice}\n当前分数：{currentScore}\n场景：{sceneDescription}\n\n请分析这个选择对游戏进程的影响，并给出分数变化的理由。\n\n字数限制：\n- 推理分析：控制在100-200字以内\n- 确保分析简洁有力，便于玩家理解选择的影响', '{"choice": "string", "currentScore": "number", "sceneDescription": "string"}'),
+('内容审核', 'moderation', '请审核以下内容是否适合游戏使用：\n\n内容：{content}\n\n请检查是否包含不当内容，如暴力、色情、仇恨言论等。\n\n字数限制：\n- 审核结果：控制在50-100字以内\n- 确保审核意见简洁明确', '{"content": "string"}');
