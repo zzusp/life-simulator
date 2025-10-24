@@ -58,7 +58,7 @@ export function LifeTypeSelector({ lifeTypes, onSelect, isLoading = false }: Lif
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-1">主要目标</h4>
                 <ul className="text-xs text-gray-500 space-y-1">
-                  {lifeType.mainGoals.map((goal, index) => (
+                  {(lifeType.mainGoals || []).map((goal, index) => (
                     <li key={index}>• {goal}</li>
                   ))}
                 </ul>

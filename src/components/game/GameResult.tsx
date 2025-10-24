@@ -115,7 +115,7 @@ export function GameResult({ session, lifeType, endReason, endingType, onRestart
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-1">主要目标</h3>
             <ul className="text-sm text-gray-500 space-y-1">
-              {lifeType.mainGoals.map((goal, index) => (
+              {(lifeType.mainGoals || []).map((goal, index) => (
                 <li key={index}>• {goal}</li>
               ))}
             </ul>
@@ -130,7 +130,7 @@ export function GameResult({ session, lifeType, endReason, endingType, onRestart
             解锁成就
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {session.achievementsUnlocked.map((achievementId, index) => (
+            {(session.achievementsUnlocked || []).map((achievementId, index) => (
               <div key={index} className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
                 <div className="text-2xl">🏆</div>
                 <div>
@@ -149,7 +149,7 @@ export function GameResult({ session, lifeType, endReason, endingType, onRestart
           选择历史
         </h2>
         <div className="space-y-3">
-          {session.choicesMade.map((choice, index) => (
+          {(session.choicesMade || []).map((choice, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex-1">
                 <div className="font-medium text-gray-900">
