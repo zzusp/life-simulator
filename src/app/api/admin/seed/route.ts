@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { sampleLifeTypes, sampleAchievements } from '@/lib/seed-data'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,42 +13,133 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 清空现有数据
-    await supabase.from('achievements').delete().neq('id', '')
-    await supabase.from('life_types').delete().neq('id', '')
-
-    // 插入人生类型数据
-    const { data: lifeTypes, error: lifeTypesError } = await supabase
+    // 检查数据库连接状态
+    const { data: healthCheck, error: healthError } = await supabase
       .from('life_types')
-      .insert(sampleLifeTypes)
-      .select()
+      .select('count')
+      .limit(1)
 
-    if (lifeTypesError) {
-      throw new Error(`插入人生类型失败: ${lifeTypesError.message}`)
+    if (healthError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: { 
+            code: 'DATABASE_ERROR', 
+            message: '数据库连接失败' 
+          } 
+        },
+        { status: 500 }
+      )
     }
 
-    // 插入成就数据
+    // 获取当前数据统计
+    const { data: lifeTypes, error: lifeTypesError } = await supabase
+      .from('life_types')
+      .select('id, name, is_active')
+      .order('created_at', { ascending: true })
+
     const { data: achievements, error: achievementsError } = await supabase
       .from('achievements')
-      .insert(sampleAchievements)
-      .select()
+      .select('id, name, is_active')
+      .order('created_at', { ascending: true })
 
-    if (achievementsError) {
-      throw new Error(`插入成就数据失败: ${achievementsError.message}`)
+    if (lifeTypesError || achievementsError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: { 
+            code: 'QUERY_ERROR', 
+            message: '查询数据失败' 
+          } 
+        },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        lifeTypes: lifeTypes.length,
-        achievements: achievements.length,
-        message: '数据初始化成功'
+        databaseStatus: 'connected',
+        lifeTypes: {
+          total: lifeTypes?.length || 0,
+          active: lifeTypes?.filter(lt => lt.is_active).length || 0,
+          items: lifeTypes || []
+        },
+        achievements: {
+          total: achievements?.length || 0,
+          active: achievements?.filter(a => a.is_active).length || 0,
+          items: achievements || []
+        },
+        message: '数据库状态正常，数据已从数据库迁移脚本初始化'
       }
     })
   } catch (error) {
-    console.error('数据初始化失败:', error)
+    console.error('数据库状态检查失败:', error)
     return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: '服务器内部错误' } },
+      { 
+        success: false, 
+        error: { 
+          code: 'INTERNAL_ERROR', 
+          message: '服务器内部错误' 
+        } 
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// 添加GET方法用于检查数据库状态
+export async function GET(request: NextRequest) {
+  try {
+    // 检查数据库连接状态
+    const { data: lifeTypes, error: lifeTypesError } = await supabase
+      .from('life_types')
+      .select('id, name, is_active')
+      .order('created_at', { ascending: true })
+
+    const { data: achievements, error: achievementsError } = await supabase
+      .from('achievements')
+      .select('id, name, is_active')
+      .order('created_at', { ascending: true })
+
+    if (lifeTypesError || achievementsError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: { 
+            code: 'DATABASE_ERROR', 
+            message: '数据库连接失败' 
+          } 
+        },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        databaseStatus: 'connected',
+        lifeTypes: {
+          total: lifeTypes?.length || 0,
+          active: lifeTypes?.filter(lt => lt.is_active).length || 0
+        },
+        achievements: {
+          total: achievements?.length || 0,
+          active: achievements?.filter(a => a.is_active).length || 0
+        },
+        message: '数据库连接正常'
+      }
+    })
+  } catch (error) {
+    console.error('数据库状态检查失败:', error)
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: { 
+          code: 'INTERNAL_ERROR', 
+          message: '服务器内部错误' 
+        } 
+      },
       { status: 500 }
     )
   }
