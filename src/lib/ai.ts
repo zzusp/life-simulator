@@ -5,6 +5,10 @@ import { AIPrompt, AIResponse, ModerationResult } from '@/types/game'
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'placeholder-api-key',
   baseURL: process.env.OPENAI_BASE_URL || undefined, // 如果未设置则使用默认的OpenAI API地址
+  defaultHeaders: {
+    'Authorization': `Bearer ${process.env.OPENAI_AUTH_TOKEN || process.env.OPENAI_API_KEY}`,
+  },
+  timeout: 60000, // 60秒超时
 })
 
 // AI服务类
@@ -31,45 +35,45 @@ export class AIService {
     }
 
     try {
-      const response = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: '你是一个专业的游戏情节设计师。请根据用户提供的信息生成游戏场景，包含场景描述和3-5个选择选项。\n\n要求：\n- 场景描述：控制在150-300字以内\n- 每个选择选项：控制在20-50字以内，要具体、有意义\n- 选择选项应该结合剧情场景，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该结合当前场景，给出明确的行动描述\n- 不要显示分值，让玩家根据具体情况判断\n- 确保内容简洁明了，便于玩家快速理解\n\n请按以下格式输出：\n场景描述：[你的场景描述]\n\n选择选项：\n1. [具体行动选项1]\n2. [具体行动选项2]\n3. [具体行动选项3]\n4. [具体行动选项4]\n5. [具体行动选项5]'
-          },
-          {
-            role: 'user',
-            content: this.replaceVariables(prompt, variables)
-          }
-        ],
-        temperature: 0.8,
-        max_tokens: 2000, // 增加token限制以支持更长的内容
-      })
+        const response = await openai.chat.completions.create({
+          model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: '你是一个专业的游戏情节设计师。请根据用户提供的信息生成游戏场景，包含场景描述和3-5个选择选项。\n\n要求：\n- 场景描述：控制在150-300字以内\n- 每个选择选项：控制在20-50字以内，要具体、有意义\n- 选择选项应该结合剧情场景，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该结合当前场景，给出明确的行动描述\n- 不要显示分值，让玩家根据具体情况判断\n- 确保内容简洁明了，便于玩家快速理解\n\n请按以下格式输出：\n场景描述：[你的场景描述]\n\n选择选项：\n1. [具体行动选项1]\n2. [具体行动选项2]\n3. [具体行动选项3]\n4. [具体行动选项4]\n5. [具体行动选项5]'
+            },
+            {
+              role: 'user',
+              content: this.replaceVariables(prompt, variables)
+            }
+          ],
+          temperature: 0.8,
+          max_tokens: 2000, // 增加token限制以支持更长的内容
+        })
 
       const content = response.choices[0]?.message?.content || ''
       const result = this.parseAIResponse(content)
-      
-      // 缓存结果
-      this.cache.set(cacheKey, result)
-      this.manageCache()
-      
-      return result
-    } catch (error: any) {
+        
+        // 缓存结果
+        this.cache.set(cacheKey, result)
+        this.manageCache()
+        
+        return result
+      } catch (error: any) {
       console.error('AI场景生成失败:', error)
       
-      // 处理速率限制错误
-      if (error.status === 429 || error.code === 429) {
-        throw new Error('AI服务暂时繁忙，请稍后重试')
-      }
-      
-      // 处理其他AI错误
-      if (error.message?.includes('Rate limit') || error.message?.includes('quota')) {
-        throw new Error('AI服务暂时繁忙，请稍后重试')
-      }
-      
+          // 处理速率限制错误
+          if (error.status === 429 || error.code === 429) {
+            throw new Error('AI服务暂时繁忙，请稍后重试')
+          }
+          
+          // 处理其他AI错误
+          if (error.message?.includes('Rate limit') || error.message?.includes('quota')) {
+            throw new Error('AI服务暂时繁忙，请稍后重试')
+          }
+          
       throw new Error(`场景生成遇到问题，请稍后重试`)
-    }
+        }
   }
 
   // 生成选择选项
@@ -81,46 +85,46 @@ export class AIService {
       return this.cache.get(cacheKey)
     }
 
-    try {
-      const response = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: '你是一个专业的游戏设计师。请为给定的场景生成3-5个选择选项。\n\n要求：\n- 每个选择选项：控制在20-50字以内，要具体、有意义\n- 选择选项应该反映真实的人生决策，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该有明确的行动描述，如"直接申请这个职位"、"先做兼职积累经验"等\n- 不要显示分值，让玩家根据具体情况判断\n- 确保选项简洁明了，便于玩家快速决策'
-          },
-          {
-            role: 'user',
-            content: this.replaceVariables(prompt, variables)
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500, // 增加token限制以支持更长的选择内容
-      })
+      try {
+        const response = await openai.chat.completions.create({
+          model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: '你是一个专业的游戏设计师。请为给定的场景生成3-5个选择选项。\n\n要求：\n- 每个选择选项：控制在20-50字以内，要具体、有意义\n- 选择选项应该反映真实的人生决策，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该有明确的行动描述，如"直接申请这个职位"、"先做兼职积累经验"等\n- 不要显示分值，让玩家根据具体情况判断\n- 确保选项简洁明了，便于玩家快速决策'
+            },
+            {
+              role: 'user',
+              content: this.replaceVariables(prompt, variables)
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1500, // 增加token限制以支持更长的选择内容
+        })
 
-      const content = response.choices[0]?.message?.content || ''
-      const result = this.parseAIResponse(content)
-      
-      // 缓存结果
-      this.cache.set(cacheKey, result)
-      this.manageCache()
-      
-      return result
-    } catch (error: any) {
+        const content = response.choices[0]?.message?.content || ''
+        const result = this.parseAIResponse(content)
+        
+        // 缓存结果
+        this.cache.set(cacheKey, result)
+        this.manageCache()
+        
+        return result
+      } catch (error: any) {
       console.error('AI选择生成失败:', error)
-      
-      // 处理速率限制错误
-      if (error.status === 429 || error.code === 429) {
-        throw new Error('AI服务暂时繁忙，请稍后重试')
-      }
-      
-      // 处理其他AI错误
-      if (error.message?.includes('Rate limit') || error.message?.includes('quota')) {
-        throw new Error('AI服务暂时繁忙，请稍后重试')
-      }
-      
+        
+          // 处理速率限制错误
+          if (error.status === 429 || error.code === 429) {
+            throw new Error('AI服务暂时繁忙，请稍后重试')
+          }
+          
+          // 处理其他AI错误
+          if (error.message?.includes('Rate limit') || error.message?.includes('quota')) {
+            throw new Error('AI服务暂时繁忙，请稍后重试')
+          }
+          
       throw new Error(`选择生成遇到问题，请稍后重试`)
-    }
+        }
   }
 
   // 生成推理分析

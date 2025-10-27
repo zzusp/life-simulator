@@ -10,7 +10,7 @@ export const config = {
   ai: {
     model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
     baseURL: process.env.OPENAI_BASE_URL || undefined,
-    maxTokens: 1000,
+    maxTokens: 2000,
     temperature: 0.8,
     timeout: 30000,
   },
