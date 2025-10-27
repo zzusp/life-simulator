@@ -1,0 +1,616 @@
+/**
+ * Animations CSS: 手绘卡通风格动画库
+ * 
+ * 定义活泼的动效：300-400ms 时长，弹性曲线，轻微位移和缩放
+ */
+
+/* ============================================================================
+   动画时长和缓动曲线变量
+   ============================================================================ */
+
+:root {
+  /* 动画时长 */
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-cartoon: 350ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+  
+  /* 缓动曲线 */
+  --easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --easing-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --easing-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* 位移和缩放限制 */
+  --translate-sm: 4px;
+  --translate-md: 8px;
+  --translate-lg: 16px;
+  --scale-sm: 1.02;
+  --scale-md: 1.05;
+}
+
+/* ============================================================================
+   关键帧动画定义
+   ============================================================================ */
+
+/* 摇摆动画（手绘感）*/
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-1deg);
+  }
+  50% {
+    transform: rotate(1deg);
+  }
+}
+
+/* 弹跳入场 */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 弹跳退出 */
+@keyframes bounceOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* 浮动动画（装饰元素）*/
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* 淡入 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 淡出 */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* 从上滑入 */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 从下滑入 */
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 脉冲动画（加载指示）*/
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 旋转动画（加载指示）*/
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================================
+   动画工具类
+   ============================================================================ */
+
+/* 摇摆 */
+.animate-wiggle {
+  animation: wiggle var(--duration-slow) var(--easing-ease-in-out) infinite;
+}
+
+/* 弹跳入场 */
+.animate-bounce-in {
+  animation: bounceIn var(--duration-cartoon) var(--easing-bounce);
+}
+
+/* 弹跳退出 */
+.animate-bounce-out {
+  animation: bounceOut var(--duration-cartoon) var(--easing-bounce);
+}
+
+/* 浮动 */
+.animate-float {
+  animation: float var(--duration-slower) var(--easing-ease-in-out) infinite;
+}
+
+/* 淡入 */
+.animate-fade-in {
+  animation: fadeIn var(--duration-base) var(--easing-ease-out);
+}
+
+/* 淡出 */
+.animate-fade-out {
+  animation: fadeOut var(--duration-base) var(--easing-ease-in);
+}
+
+/* 从上滑入 */
+.animate-slide-in-top {
+  animation: slideInFromTop var(--duration-cartoon) var(--easing-bounce);
+}
+
+/* 从下滑入 */
+.animate-slide-in-bottom {
+  animation: slideInFromBottom var(--duration-cartoon) var(--easing-bounce);
+}
+
+/* 脉冲 */
+.animate-pulse {
+  animation: pulse var(--duration-slower) var(--easing-ease-in-out) infinite;
+}
+
+/* 旋转 */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ============================================================================
+   交互动效类
+   ============================================================================ */
+
+/* 按钮按下效果 */
+.button-press {
+  transition: transform var(--duration-fast) var(--easing-standard),
+              box-shadow var(--duration-fast) var(--easing-standard);
+}
+
+.button-press:active {
+  transform: translateY(2px);
+}
+
+/* 卡片悬停效果 */
+.card-hover {
+  transition: transform var(--duration-cartoon) var(--easing-bounce),
+              box-shadow var(--duration-cartoon) var(--easing-standard);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+/* 悬停浮起效果（轻微）*/
+.hover-lift {
+  transition: transform var(--duration-cartoon) var(--easing-ease-out),
+              box-shadow var(--duration-cartoon) var(--easing-standard);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* 悬停缩放效果 */
+.hover-scale {
+  transition: transform var(--duration-cartoon) var(--easing-bounce);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* 悬停旋转效果 */
+.hover-rotate {
+  transition: transform var(--duration-cartoon) var(--easing-bounce);
+}
+
+.hover-rotate:hover {
+  transform: rotate(3deg);
+}
+
+/* ============================================================================
+   页面过渡动画
+   ============================================================================ */
+
+/* 页面入场 */
+.page-enter {
+  animation: fadeIn var(--duration-slow) var(--easing-ease-out);
+}
+
+/* 页面退出 */
+.page-exit {
+  animation: fadeOut var(--duration-base) var(--easing-ease-in);
+}
+
+/* ============================================================================
+   减少动态效果支持（可访问性）
+   ============================================================================ */
+
+/* 当用户设置"减少动态效果"时，禁用所有动画和过渡 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* 保留淡入淡出效果 */
+  .animate-fade-in,
+  .animate-fade-out {
+    animation-name: fadeIn, fadeOut;
+    animation-duration: var(--duration-fast) !important;
+  }
+  
+  /* 移除所有位移和缩放效果 */
+  .card-hover:hover,
+  .hover-lift:hover {
+    transform: none !important;
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1) !important;
+  }
+  
+  .button-press:active {
+    transform: none !important;
+  }
+}
+
+/* ============================================================================
+   性能优化
+   ============================================================================ */
+
+/* 对于需要频繁动画的元素，使用 will-change 优化性能 */
+.will-animate {
+  will-change: transform, opacity;
+}
+
+/* 动画结束后移除 will-change */
+.animation-end {
+  will-change: auto;
+}
+
+/* 使用 GPU 加速 */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* ============================================================================
+   加载状态动画
+   ============================================================================ */
+
+/* 骨架屏加载动画 */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+/* 手绘风格骨架屏 */
+.skeleton-cartoon {
+  background: linear-gradient(
+    90deg,
+    #f5e6d3 25%,
+    #e8d5bd 50%,
+    #f5e6d3 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 0.75rem;
+}
+
+/* ============================================================================
+   成就提示动画
+   ============================================================================ */
+
+/* 成就 Toast 入场 */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* 成就 Toast 退出 */
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+}
+
+.toast-enter {
+  animation: toastSlideIn var(--duration-cartoon) var(--easing-bounce);
+}
+
+.toast-exit {
+  animation: toastSlideOut var(--duration-base) var(--easing-ease-in);
+}
+
+/* ============================================================================
+   分数变化动画
+   ============================================================================ */
+
+/* 分数数字变化动画 */
+@keyframes scoreChange {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.score-change {
+  animation: scoreChange var(--duration-slow) var(--easing-bounce);
+}
+
+/* 分数增加高亮 */
+@keyframes scoreIncrease {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(107, 163, 104, 0.2);
+  }
+}
+
+.score-increase {
+  animation: scoreIncrease 1s var(--easing-ease-in-out);
+}
+
+/* 分数减少高亮 */
+@keyframes scoreDecrease {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(199, 107, 107, 0.2);
+  }
+}
+
+.score-decrease {
+  animation: scoreDecrease 1s var(--easing-ease-in-out);
+}
+
+/* ============================================================================
+   高级游戏UI动画（新增）
+   ============================================================================ */
+
+/* 光效扫过动画 */
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-15deg);
+  }
+}
+
+.animate-shine {
+  animation: shine 2s ease-in-out infinite;
+}
+
+/* 粒子飘浮动画 */
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-particle-float {
+  animation: particleFloat 3s ease-in-out infinite;
+}
+
+/* 脉冲光晕动画 */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.8), 0 0 60px rgba(59, 130, 246, 0.4);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* 卡片进入动画（3D效果）*/
+@keyframes cardEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9) rotateX(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotateX(0deg);
+  }
+}
+
+.animate-card-enter {
+  animation: cardEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 星星闪烁 */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-sparkle {
+  animation: sparkle 1.5s ease-in-out infinite;
+}
+
+/* 摇晃动画（强调）*/
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* 弹性进入（增强版）*/
+@keyframes bounceInEnhanced {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-bounce-in-enhanced {
+  animation: bounceInEnhanced 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* 光圈扩散 */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple 0.6s ease-out;
+}
+
+/* 3D翻转动画 */
+@keyframes flip3D {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(180deg);
+  }
+}
+
+.animate-flip-3d {
+  animation: flip3D 0.6s ease-in-out;
+}
+
+/* 悬浮上升动画（持续）*/
+@keyframes floatUp {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float-up {
+  animation: floatUp 3s ease-in-out infinite;
+}
+

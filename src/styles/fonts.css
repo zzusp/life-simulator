@@ -1,0 +1,133 @@
+/**
+ * Fonts CSS: 手绘卡通风格字体配置
+ * 
+ * 引入站酷快乐体（标题）和霞鹜文楷（正文）
+ * 使用 CDN 加载以简化部署
+ */
+
+/* ============================================================================
+   站酷快乐体 (Zcool KuaiLe) - 标题专用手写体
+   ============================================================================ */
+
+/* 从 Google Fonts 加载站酷快乐体 */
+@import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+
+/* ============================================================================
+   霞鹜文楷 (LXGW WenKai) - 正文/按钮/标签用楷体
+   ============================================================================ */
+
+/* 从 jsDelivr CDN 加载霞鹜文楷 */
+@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.1.0/style.css');
+
+/* ============================================================================
+   字体应用规则
+   ============================================================================ */
+
+/* h1 标题专用手写体 */
+h1 {
+  font-family: 'ZCOOL KuaiLe', 'Zcool KuaiLe', '站酷快乐体', cursive, system-ui;
+}
+
+/* h2-h6 和所有其他文本使用楷体 */
+h2, h3, h4, h5, h6,
+body, p, span, button, input, textarea, select,
+.body-font {
+  font-family: 'LXGW WenKai', '霞鹜文楷', 'LXGW WenKai Screen', serif, system-ui;
+}
+
+/* 标题字体类（可复用）*/
+.title-font {
+  font-family: 'ZCOOL KuaiLe', 'Zcool KuaiLe', '站酷快乐体', cursive, system-ui;
+}
+
+/* 正文字体类（可复用）*/
+.body-font {
+  font-family: 'LXGW WenKai', '霞鹜文楷', 'LXGW WenKai Screen', serif, system-ui;
+}
+
+/* ============================================================================
+   字体加载优化
+   ============================================================================ */
+
+/* 字体加载时的回退样式 */
+.font-loading h1 {
+  font-family: cursive, system-ui;
+  opacity: 0.8;
+}
+
+.font-loading body,
+.font-loading .body-font {
+  font-family: serif, system-ui;
+  opacity: 0.9;
+}
+
+/* 字体加载完成后的过渡动画 */
+.fonts-loaded {
+  animation: fontFadeIn 0.3s ease-in-out;
+}
+
+@keyframes fontFadeIn {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ============================================================================
+   响应式字体大小
+   ============================================================================ */
+
+/* 移动端字号增大以确保可读性 */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px; /* 正文最小 16px */
+    line-height: 1.75;
+  }
+  
+  h1 {
+    font-size: 24px; /* 标题最小 24px */
+    line-height: 1.5;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  h3 {
+    font-size: 18px;
+  }
+}
+
+/* 桌面端标准字号 */
+@media (min-width: 769px) {
+  body {
+    font-size: 16px;
+    line-height: 1.75;
+  }
+  
+  h1 {
+    font-size: 36px;
+    line-height: 1.3;
+  }
+  
+  h2 {
+    font-size: 30px;
+  }
+  
+  h3 {
+    font-size: 24px;
+  }
+}
+
+/* ============================================================================
+   性能优化
+   ============================================================================ */
+
+/* CDN字体自动优化：
+ * - Google Fonts 和 jsDelivr 提供自动字体子集化
+ * - 支持 font-display: swap 以提升性能
+ * - 字体文件自动缓存在用户浏览器中
+ */
+

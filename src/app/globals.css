@@ -24,6 +24,14 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+
+    /* motion tokens */
+    --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+    --motion-duration-standard: 200ms;
+    
+    /* focus ring tokens */
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
   }
 
   .dark {
@@ -53,7 +61,72 @@
   * {
     @apply border-border;
   }
+  
+  /* 全局背景 - 温暖米黄色（参考图片）*/
   body {
-    @apply bg-background text-foreground;
+    @apply text-gray-800 font-body;
+    min-height: 100vh;
+    /* 米黄色背景 */
+    background: #e8e4d0;
+    position: relative;
+  }
+  
+  /* 简单的纹理效果 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: 
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139,115,85,0.02) 2px, rgba(139,115,85,0.02) 4px);
+    opacity: 0.3;
+  }
+  
+  /* h1 使用手写体（站酷快乐体）*/
+  h1 {
+    @apply font-title;
+  }
+  
+  /* h2-h6 使用楷体 */
+  h2, h3, h4, h5, h6 {
+    @apply font-body;
+  }
+  
+  /* Global Focus Visible Styles - 手绘卡通风格 */
+  *:focus-visible {
+    outline: 3px solid theme('colors.cartoon.blue');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  
+  /* Reduce Motion Support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* 移动端字号最小值 */
+  @media (max-width: 768px) {
+    body {
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    
+    h1 {
+      font-size: 24px;
+    }
+  }
+}
+
+@layer components {
+  .transition-standard {
+    transition-timing-function: var(--motion-ease);
+    transition-duration: var(--motion-duration-standard);
   }
 }
