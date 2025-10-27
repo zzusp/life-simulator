@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import ErrorBlock from '@/components/common/ErrorBlock'
 
 interface GameSummary {
   lifeType: string
@@ -115,11 +116,15 @@ export default function SharePage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">加载失败</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto">
+            <ErrorBlock
+              title="加载失败"
+              description={error}
+              onRetry={loadGameSummary}
+            />
+          </div>
         </div>
       </div>
     )
@@ -127,11 +132,15 @@ export default function SharePage() {
 
   if (!gameSummary) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-gray-500 text-6xl mb-4">❓</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">游戏总结不存在</h1>
-          <p className="text-gray-600 mb-4">请检查分享链接是否正确</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto">
+            <ErrorBlock
+              title="游戏总结不存在"
+              description="请检查分享链接是否正确"
+              onRetry={loadGameSummary}
+            />
+          </div>
         </div>
       </div>
     )
@@ -152,46 +161,40 @@ export default function SharePage() {
           </div>
 
           {/* 游戏总结卡片 */}
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <div className="bg-white rounded-lg shadow-lg p-8 mb-8 transition-standard" aria-label="游戏总结">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {gameSummary.lifeType}
               </h2>
-              <div className={`text-4xl font-bold ${getScoreColor(gameSummary.finalScore)}`}>
+              <div className={`text-4xl font-bold ${getScoreColor(gameSummary.finalScore)}`} aria-label="最终分数">
                 {gameSummary.finalScore} 分
               </div>
-              <div className="text-lg text-gray-600 mt-2">
+              <div className="text-lg text-gray-600 mt-2" aria-label="分数评价标签">
                 {getScoreLabel(gameSummary.finalScore)}
               </div>
             </div>
 
             {/* 游戏统计 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="text-center">
+              <div className="text-center p-4 rounded-lg bg-gray-50" aria-label="做出选择次数">
                 <div className="text-3xl font-bold text-gray-900">
                   {gameSummary.choicesMade}
                 </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  做出选择
-                </div>
+                <div className="text-sm text-gray-500 mt-1">做出选择</div>
               </div>
               
-              <div className="text-center">
+              <div className="text-center p-4 rounded-lg bg-gray-50" aria-label="解锁成就数量">
                 <div className="text-3xl font-bold text-gray-900">
                   {gameSummary.achievements.length}
                 </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  解锁成就
-                </div>
+                <div className="text-sm text-gray-500 mt-1">解锁成就</div>
               </div>
               
-              <div className="text-center">
+              <div className="text-center p-4 rounded-lg bg-gray-50" aria-label="游戏时长">
                 <div className="text-3xl font-bold text-gray-900">
                   {formatDuration(gameSummary.duration)}
                 </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  游戏时长
-                </div>
+                <div className="text-sm text-gray-500 mt-1">游戏时长</div>
               </div>
             </div>
 
@@ -219,7 +222,7 @@ export default function SharePage() {
             <div className="text-center">
               <button
                 onClick={() => window.open('/', '_blank')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-standard"
               >
                 开始你的游戏
               </button>
@@ -227,7 +230,7 @@ export default function SharePage() {
           </div>
 
           {/* 游戏介绍 */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="bg-white rounded-lg shadow-lg p-6 transition-standard" aria-label="关于人生模拟器">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">
               关于人生模拟器
             </h3>
