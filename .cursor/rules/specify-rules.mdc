@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-10-23
 
 ## Active Technologies
+- TypeScript 5.x（Next.js 环境） + Next.js(App Router), Tailwind CSS, shadcn/ui, Radix UI (002-ui-ux-redesign)
+- 复用既有 Supabase；本计划不引入新表 (002-ui-ux-redesign)
 
 - Node.js 20.x (LTS), TypeScript 5.x, React 18.x, Vite 5.x + Next.js 15.x, Supabase, OpenAI API, Docker, GitHub Actions (001-life-simulator-game)
 
@@ -23,6 +25,7 @@ npm test; npm run lint
 Node.js 20.x (LTS), TypeScript 5.x, React 18.x, Vite 5.x: Follow standard conventions
 
 ## Recent Changes
+- 002-ui-ux-redesign: Added TypeScript 5.x（Next.js 环境） + Next.js(App Router), Tailwind CSS, shadcn/ui, Radix UI
 
 - 001-life-simulator-game: Added Node.js 20.x (LTS), TypeScript 5.x, React 18.x, Vite 5.x + Next.js 15.x, Supabase, OpenAI API, Docker, GitHub Actions
 
