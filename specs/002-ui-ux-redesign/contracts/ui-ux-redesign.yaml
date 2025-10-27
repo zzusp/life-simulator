@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: Life Simulator UI/UX Redesign Contracts
+  version: 1.0.0
+  description: Contracts focused on UI/UX data for history list/detail used by redesigned pages.
+servers:
+  - url: https://example.com
+paths:
+  /api/history:
+    get:
+      summary: Get paginated (cursor) history list for infinite scroll
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+          required: false
+          description: Opaque cursor for infinite scroll
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 50
+          required: false
+      responses:
+        '200':
+          description: History items and next cursor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HistoryItem'
+                      nextCursor:
+                        type: string
+                        nullable: true
+                  error:
+                    $ref: '#/components/schemas/ErrorResponse'
+  /api/history/{sessionId}:
+    get:
+      summary: Get history detail by session id
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: History detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/HistoryDetail'
+                  error:
+                    $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    HistoryItem:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+        lifeType:
+          type: string
+        score:
+          type: integer
+        scoreLabel:
+          type: string
+        achievements:
+          type: integer
+        durationSec:
+          type: integer
+    HistoryDetail:
+      type: object
+      properties:
+        header:
+          type: object
+          properties:
+            title:
+              type: string
+            summary:
+              type: string
+        steps:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              choiceText:
+                type: string
+              scoreImpact:
+                type: integer
+        keyNodes:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
