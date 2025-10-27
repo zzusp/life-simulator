@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
+import '../styles/fonts.css'
+import '../styles/animations.css'
 
 export const metadata: Metadata = {
   title: '人生模拟器',
@@ -16,7 +15,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body className={inter.className}>
+      <head>
+        {/* 预加载关键字体 */}
+        <link 
+          rel="preload" 
+          href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" 
+          as="style"
+        />
+        <link 
+          rel="preload" 
+          href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.1.0/style.css" 
+          as="style"
+        />
+      </head>
+      <body className="font-body">
         {children}
       </body>
     </html>

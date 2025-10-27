@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { LifeTypeSelector } from '@/components/game/LifeTypeSelector'
 import { LifeType } from '@/types/game'
 import { useGameStore } from '@/lib/store'
+import { FullPageSkeleton } from '@/components/common/LoadingSkeleton'
+import { ErrorBlock } from '@/components/common/ErrorBlock'
 
 export default function GameHomePage() {
   const router = useRouter()
@@ -65,8 +67,6 @@ export default function GameHomePage() {
       }
 
       const { sessionId } = result.data
-      
-      // 跳转到游戏页面
       router.push(`/play/${sessionId}`)
       
     } catch (error) {
@@ -79,67 +79,56 @@ export default function GameHomePage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">加载人生类型中...</p>
-        </div>
-      </div>
-    )
+    return <FullPageSkeleton text="加载人生类型中..." />
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">加载失败</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadLifeTypes}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-          >
-            重试
-          </button>
-        </div>
-      </div>
+      <ErrorBlock
+        title="加载失败"
+        description={error}
+        icon="error"
+        retryText="重试"
+        onRetry={loadLifeTypes}
+        secondaryText="返回首页"
+        onSecondary={() => router.push('/')}
+      />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen px-4 py-10">
+      <div className="container mx-auto max-w-6xl">
         {/* 页面标题 */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            人生模拟器
+        <div className="text-center mb-10">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">
+            选择你的人生
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            体验不同的人生，做出关键选择，看看你的选择会带你走向何方
+          <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+            每一次选择都将塑造独特的人生轨迹
           </p>
         </div>
 
-        {/* 游戏介绍 */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 游戏介绍卡片 */}
+        <div className="bg-white rounded-3xl p-8 border-[5px] border-gray-900 shadow-lg mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="text-4xl mb-3">🎯</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">选择人生类型</h3>
+              <div className="text-5xl mb-3">🎯</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">选择人生类型</h3>
               <p className="text-gray-600 text-sm">
                 从创业人生、修真人生、穿越古代人生等多种类型中选择
               </p>
             </div>
             <div className="text-center">
-              <div className="text-4xl mb-3">🤖</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">AI生成情节</h3>
+              <div className="text-5xl mb-3">🤖</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">AI生成情节</h3>
               <p className="text-gray-600 text-sm">
                 基于AI智能生成的情节节点和选择，每次都有不同的体验
               </p>
             </div>
             <div className="text-center">
-              <div className="text-4xl mb-3">📊</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">分数系统</h3>
+              <div className="text-5xl mb-3">📊</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">分数系统</h3>
               <p className="text-gray-600 text-sm">
                 0-100分系统，你的选择会影响分数，最终决定游戏结局
               </p>
@@ -148,10 +137,11 @@ export default function GameHomePage() {
         </div>
 
         {/* 人生类型选择 */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+        <div className="bg-white rounded-3xl p-8 border-[5px] border-gray-900 shadow-lg mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">
             选择你的人生类型
           </h2>
+          
           <LifeTypeSelector
             lifeTypes={lifeTypes}
             onSelect={handleLifeTypeSelect}
@@ -160,9 +150,12 @@ export default function GameHomePage() {
         </div>
 
         {/* 游戏说明 */}
-        <div className="mt-8 bg-blue-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">游戏说明</h3>
-          <div className="text-blue-800 text-sm space-y-2">
+        <div className="bg-sky-100 rounded-3xl p-6 border-[5px] border-sky-400 shadow-lg">
+          <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <span>📖</span>
+            <span>游戏说明</span>
+          </h3>
+          <div className="text-gray-700 text-sm space-y-2">
             <p>• 游戏完全匿名，无需注册登录</p>
             <p>• 每次选择都会影响你的分数（0-100分）</p>
             <p>• 分数达到100分或0分时游戏结束</p>

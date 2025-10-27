@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { SceneNode, Choice } from '@/types/game'
-import { getScoreColor, getScoreLabel } from '@/lib/utils'
+import { getScoreLabel } from '@/lib/design-tokens'
+import { cn } from '@/lib/utils'
 
 interface GameSceneProps {
   scene: SceneNode
@@ -18,10 +18,8 @@ export function GameScene({ scene, currentScore, onChoiceSelect, isLoading = fal
 
   const handleChoiceSelect = async (choiceIndex: number) => {
     if (isProcessing) return
-    
     setSelectedChoice(choiceIndex)
     setIsProcessing(true)
-    
     try {
       await onChoiceSelect(choiceIndex)
     } finally {
@@ -29,91 +27,102 @@ export function GameScene({ scene, currentScore, onChoiceSelect, isLoading = fal
     }
   }
 
+  const scoreData = getScoreLabel(currentScore)
+
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* 场景标题 */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {scene.title}
-        </h1>
-        <div className="flex items-center justify-center space-x-4">
-          <div className="text-sm text-gray-500">
-            场景 {scene.sceneNumber}
+    <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
+      {/* 分数和场景信息卡片 - 浅蓝色卡片 */}
+      <div className="bg-sky-200 rounded-3xl p-5 border-[5px] border-sky-500 shadow-lg">
+        <div className="flex justify-between items-center mb-3">
+          <div>
+            <span className="text-sm text-gray-800 font-bold">场景 {scene.sceneNumber}</span>
           </div>
-          <div className={`text-sm font-medium ${getScoreColor(currentScore)}`}>
-            分数: {currentScore} ({getScoreLabel(currentScore)})
-          </div>
-        </div>
-      </div>
-
-      {/* 场景描述 */}
-      <div className="bg-white rounded-lg shadow-md p-6 border">
-        <div className="prose max-w-none">
-          <p className="text-gray-700 leading-relaxed text-lg">
-            {scene.description}
-          </p>
-        </div>
-      </div>
-
-      {/* 选择选项 */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          请选择你的行动：
-        </h3>
-        
-        {scene.choices.map((choice: Choice, index: number) => (
-          <div
-            key={index}
-            className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
-              selectedChoice === index
-                ? 'border-primary bg-primary/5 shadow-md'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={() => handleChoiceSelect(index)}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-gray-800 font-medium">
-                  {choice.text}
-                </p>
-                {choice.reasoning && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    {choice.reasoning}
-                  </p>
-                )}
-              </div>
-              
-              <div className={`text-sm font-medium ml-4 ${
-                choice.scoreImpact > 0 
-                  ? 'text-green-600' 
-                  : choice.scoreImpact < 0 
-                  ? 'text-red-600' 
-                  : 'text-gray-500'
-              }`}>
-                {choice.scoreImpact > 0 ? '+' : ''}{choice.scoreImpact}
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="bg-green-100 px-4 py-1 rounded-xl border-3 border-green-400">
+              <span className="text-xs text-gray-700 font-semibold">{scoreData.label}</span>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-700">当前分数</div>
+              <div className="text-2xl font-black text-gray-900">{currentScore}</div>
             </div>
           </div>
-        ))}
+        </div>
+        
+        <h2 className="text-xl md:text-2xl font-black text-gray-900 mb-3">
+          {scene.title}
+        </h2>
+        
+        <p className="text-base text-gray-800 leading-relaxed">
+          {scene.description}
+        </p>
       </div>
 
-      {/* 加载状态 */}
-      {(isLoading || isProcessing) && (
-        <div className="flex items-center justify-center p-4">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-          <span className="ml-2 text-gray-600">
-            {isProcessing ? '处理选择中...' : '加载中...'}
-          </span>
-        </div>
-      )}
+      {/* 选择提示 */}
+      <div className="text-center py-2">
+        <h3 className="text-lg font-bold text-gray-800">
+          这次打算开发什么类型的游戏呢？
+        </h3>
+      </div>
 
-      {/* 选择禁用状态 */}
+      {/* 选择卡片列表 */}
+      <div className="space-y-3">
+        {scene.choices.map((choice: Choice, index: number) => {
+          const isSelected = selectedChoice === index
+          const disabled = isProcessing || isLoading
+          
+          return (
+            <div
+              key={index}
+              className={cn(
+                "bg-white rounded-2xl p-5 border-[5px] shadow-lg transition-all",
+                !disabled && "hover:shadow-xl hover:-translate-y-1 cursor-pointer",
+                disabled && "opacity-60 cursor-not-allowed",
+                isSelected ? "border-teal-500" : "border-gray-900"
+              )}
+              onClick={() => !disabled && handleChoiceSelect(index)}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-lg font-bold text-gray-900 mb-1">
+                    {choice.text}
+                  </p>
+                  {choice.reasoning && (
+                    <p className="text-sm text-gray-600">
+                      {choice.reasoning}
+                    </p>
+                  )}
+                </div>
+                
+                <button
+                  disabled={disabled}
+                  className={cn(
+                    "px-6 py-3 rounded-2xl font-bold text-white border-[4px] shadow-md whitespace-nowrap transition-all",
+                    !disabled && "hover:shadow-lg active:translate-y-1",
+                    choice.scoreImpact > 0 && "bg-teal-400 border-teal-600",
+                    choice.scoreImpact < 0 && "bg-red-400 border-red-600",
+                    choice.scoreImpact === 0 && "bg-gray-400 border-gray-600"
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (!disabled) handleChoiceSelect(index)
+                  }}
+                >
+                  {isSelected ? "已选择" : "选择"}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 处理中遮罩 */}
       {isProcessing && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              <span className="text-gray-700">AI正在生成下一个场景...</span>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 border-[5px] border-gray-900 shadow-2xl max-w-md mx-4">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="w-20 h-20 border-[6px] border-teal-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-2xl font-black text-gray-900">AI正在生成下一个场景...</p>
+              <p className="text-sm text-gray-600">请稍候，马上就好 ✨</p>
             </div>
           </div>
         </div>
