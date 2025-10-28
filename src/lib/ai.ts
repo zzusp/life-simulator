@@ -381,3 +381,106 @@ export class AIService {
 
 // 导出单例实例
 export const aiService = AIService.getInstance()
+
+// 生成总结 —— 对外函数（供 API 使用）
+export interface LifeSummaryChoice {
+  choiceText: string
+  scoreImpact: number
+  createdAt?: string
+  sceneTitle?: string
+  sceneDescription?: string
+  reasoningAfter?: string
+}
+
+export interface LifeSummaryInput {
+  lifeTypeName: string
+  finalScore: number
+  choiceCount: number
+  durationSeconds: number
+  choices: LifeSummaryChoice[]
+  outcome: string | null
+  keyTurningPoints?: { index: number; sceneTitle?: string | null; choiceText: string; delta: number }[]
+  allowedTitles?: string[]
+  allowedChoiceTexts?: string[]
+  attempt?: number
+}
+
+export async function generateLifeSummary(input: LifeSummaryInput): Promise<{
+  summaryText: string
+  model?: string
+  tokensPrompt?: number
+  tokensOutput?: number
+  promptUsed: string
+}> {
+  const { lifeTypeName, finalScore, choiceCount, durationSeconds, choices, outcome, keyTurningPoints = [], allowedTitles = [], allowedChoiceTexts = [], attempt = 1 } = input
+
+  const outcomeTone = outcome === 'victory'
+    ? '以庆祝与成就的语气'
+    : outcome === 'defeat'
+    ? '以建设性与鼓励的语气'
+    : outcome === 'timeout'
+    ? '以旅程丰厚与多元的语气'
+    : '以温暖与启发的语气'
+
+  const contextDigest = choices
+    .map((c, idx) => {
+      const title = c.sceneTitle ? `《${c.sceneTitle}》` : '（无标题场景）'
+      const desc = (c.sceneDescription || '').trim().slice(0, 40)
+      const delta = `${c.scoreImpact >= 0 ? '+' : ''}${c.scoreImpact}`
+      const after = c.reasoningAfter ? c.reasoningAfter.trim().slice(0, 60) : ''
+      return `#${idx + 1} 场景${title}：${desc}… | 选择：“${c.choiceText}” | 分数：${delta} | 结果：${after}`
+    })
+    .join('\n')
+
+  const turningLines = keyTurningPoints
+    .map(t => `#${t.index} 「${t.choiceText}」(Δ${t.delta >= 0 ? '+' : ''}${t.delta})${t.sceneTitle ? `，场景「${t.sceneTitle}」` : ''}`)
+    .join('；')
+
+  const allowedHints = `可引用的合法标题（任选）：${allowedTitles.slice(0, 8).map(t => `《${t}》`).join('、') || '（无）'}；可引用的合法选择内容（任选）：${allowedChoiceTexts.slice(0, 8).map(c => `“${c}”`).join('、') || '（无）'}`
+
+  const retryNote = attempt > 1 ? '（注意：上一版没有足够的具体引用，这一次必须在正文中点名至少 2 处具体证据）' : ''
+
+  const prompt = `你是一位温暖的人生导师，需要根据玩家的完整游戏经历生成个性化的人生总结。${retryNote}\n\n【游戏信息】\n- 人生类型：${lifeTypeName}\n- 最终分数：${finalScore}/100\n- 选择次数：${choiceCount}\n- 游戏时长：${durationSeconds} 秒\n- 结局基调：${outcomeTone}\n\n【完整上下文（按时间顺序）】\n${contextDigest || '无记录'}\n\n【关键转折】${turningLines || '无'}\n\n【可引用提示】${allowedHints}\n\n【严格输出要求】\n- 只返回一个 JSON 对象，不要任何多余文本；\n- JSON 结构必须为：{\"summary\": \"……\"}；\n- summary 必须为 200–400 个汉字的一段连续中文文本；\n- 在 summary 正文中至少点名 2 处具体证据，使用以下两种方式之一：\n  1) 引用场景标题：形如《场景标题》；\n  2) 引用原“选择内容”：用中文引号“”括起；\n- 结合“结果”(reasoningAfter) 描述选择后的走向；\n- 语气积极温暖，避免负面词（失败/错误/糟糕 等）；\n- 严禁在 summary 中出现任何与要求/提示词/AI/模型/系统/用户/指令/token/长度/格式/生成/本文/重试等相关的元信息。`
+
+  const response = await openai.chat.completions.create({
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: '你是一个温暖而克制的中文写作者。必须仅返回 JSON 对象 {"summary":"..."}；不得包含与写作要求、AI、提示词或指令相关的任何元信息。' },
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.5,
+    max_tokens: 700,
+    response_format: { type: 'json_object' } as any,
+  })
+
+  const raw = response.choices?.[0]?.message?.content?.trim() || ''
+  let extracted = raw
+  try {
+    // 尝试直接解析 JSON
+    const obj = JSON.parse(raw)
+    if (obj && typeof obj.summary === 'string') {
+      extracted = obj.summary.trim()
+    }
+  } catch {
+    // 兼容某些模型返回 JSON 前后带文字的情况
+    const match = raw.match(/\{[\s\S]*\}/)
+    if (match) {
+      try {
+        const obj = JSON.parse(match[0])
+        if (obj && typeof obj.summary === 'string') {
+          extracted = obj.summary.trim()
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return {
+    summaryText: extracted,
+    model: (response as any)?.model,
+    tokensPrompt: (response as any)?.usage?.prompt_tokens,
+    tokensOutput: (response as any)?.usage?.completion_tokens,
+    promptUsed: prompt,
+  }
+}

@@ -1,0 +1,59 @@
+openapi: 3.0.3
+info:
+  title: AI Life Summary API
+  version: 1.0.0
+  description: Generate or fetch AI-generated personalized life summary for a completed game session.
+paths:
+  /api/game/summary:
+    post:
+      summary: Generate (or fetch cached) life summary for a session
+      description: |
+        Real-time generation on first view (if not cached). Returns cached summary on subsequent views.
+        Stores/updates summary in database and associates with the game session (1:1).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId]
+              properties:
+                sessionId:
+                  type: string
+                  description: Game session identifier
+                regenerate:
+                  type: boolean
+                  default: false
+                  description: Force regenerate summary (internal/admin use only)
+      responses:
+        '200':
+          description: Summary generated or retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [summaryText, cached, generatedAt]
+                properties:
+                  summaryText:
+                    type: string
+                    description: 200–400 Chinese characters (汉字)
+                  cached:
+                    type: boolean
+                  generatedAt:
+                    type: string
+                    format: date-time
+                  model:
+                    type: string
+                    nullable: true
+                  tokensPrompt:
+                    type: integer
+                    nullable: true
+                  tokensOutput:
+                    type: integer
+                    nullable: true
+        '400':
+          description: Invalid request
+        '404':
+          description: Session not found or not completed
+        '500':
+          description: Generation failed; fallback applied

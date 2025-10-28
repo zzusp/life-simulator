@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { GameSession, LifeType } from '@/types/game'
 import { getScoreLabel } from '@/lib/design-tokens'
 import { formatDuration } from '@/lib/utils'
@@ -28,6 +29,37 @@ export function GameResult({ session, lifeType, endReason, endingType, onRestart
   
   const scoreData = getScoreLabel(session.currentScore)
 
+  const [summary, setSummary] = useState<string | null>(null)
+  const [loadingSummary, setLoadingSummary] = useState<boolean>(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const fetchedRef = useRef<string | null>(null)
+
+  async function requestSummary() {
+    try {
+      setLoadingSummary(true)
+      setSummaryError(null)
+      const res = await fetch('/api/game/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.sessionId })
+      })
+      if (!res.ok) throw new Error('failed')
+      const data = await res.json()
+      setSummary(data.summaryText || '')
+    } catch (e) {
+      setSummaryError('summ-failed')
+    } finally {
+      setLoadingSummary(false)
+    }
+  }
+
+  useEffect(() => {
+    if (fetchedRef.current === session.sessionId) return
+    fetchedRef.current = session.sessionId
+    requestSummary()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.sessionId])
+
   const getResultTitle = () => {
     if (endingType === 'victory') return '🎉 恭喜！你的人生获得了巨大成功！'
     if (endingType === 'defeat') return '😔 很遗憾，你的人生遇到了重大挫折...'
@@ -39,6 +71,8 @@ export function GameResult({ session, lifeType, endReason, endingType, onRestart
   }
 
   const getResultDescription = () => {
+    if (summary && !loadingSummary && !summaryError) return summary
+    if (loadingSummary) return '正在为你整理这段旅程，请稍候…'
     if (endReason) return endReason
     if (endingType === 'victory') return '你通过明智的选择和努力，实现了人生的目标！'
     if (endingType === 'defeat') return '虽然遇到了一些困难，但这也是人生的一部分。'
@@ -46,6 +80,7 @@ export function GameResult({ session, lifeType, endReason, endingType, onRestart
     if (endingType === 'choice') return '你的人生走到了一个重要的转折点，需要做出关键决定。'
     if (isVictory) return '你通过明智的选择和努力，实现了人生的目标！'
     if (isDefeat) return '虽然遇到了一些困难，但这也是人生的一部分。'
+    if (summaryError) return '暂时无法生成总结，稍后可重试'
     return '你的人生还在进行中，继续努力吧！'
   }
 
@@ -63,6 +98,13 @@ export function GameResult({ session, lifeType, endReason, endingType, onRestart
         <p className="text-base md:text-lg text-ink-light leading-relaxed">
           {getResultDescription()}
         </p>
+        {summaryError && (
+          <div className="mt-3">
+            <CartoonButton variant="outline" size="sm" onClick={requestSummary}>
+              重试生成总结
+            </CartoonButton>
+          </div>
+        )}
       </PaperCard>
 
       {/* 游戏统计 - 卡片栅格 */}
