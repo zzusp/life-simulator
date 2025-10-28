@@ -138,24 +138,32 @@ interface ScoringEngine {
 }
 ```
 
-### 4. Moderator (内容审核)
+### 4. Moderator (内容审核) 【待实现】
 
-**位置**: `src/lib/moderator.ts`
+> ⚠️ **状态**: 待办事项 - 当前已移除旧代码，未来可根据需要重新实现
 
-**功能**:
+**计划位置**: `src/lib/moderator.ts`
+
+**计划功能**:
 - 敏感内容检测
 - 内容标签分类
 - 自动过滤机制
 - 审核日志记录
 
-**关键接口**:
+**TODO - 计划接口**:
 ```typescript
-interface Moderator {
-  checkContent(content: string): Promise<ModerationResult>
-  isContentSafe(result: ModerationResult): boolean
-  getContentTags(result: ModerationResult): string[]
-}
+// TODO: 未来可实现内容审核功能
+// interface Moderator {
+//   checkContent(content: string): Promise<ModerationResult>
+//   isContentSafe(result: ModerationResult): boolean
+//   getContentTags(result: ModerationResult): string[]
+// }
 ```
+
+**实现建议**:
+- 可选择集成第三方内容审核服务
+- 或自建基于关键词的简单审核机制
+- 当前游戏通过AI提示词控制内容质量
 
 ### 5. Analytics (分析系统)
 

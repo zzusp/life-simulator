@@ -15,6 +15,15 @@
 - Q: 游戏是否需要支持多人模式？比如好友对战、排行榜、分享游戏结果等社交功能？ → A: 基础社交功能（分享结果、简单排行榜）
 - Q: 游戏是否需要用户注册登录？还是支持匿名游戏？如何处理用户数据隐私和游戏记录的关联？ → A: 完全匿名，无用户身份
 
+### Session 2025-10-28 - 玩法体验优化
+
+- Q: 选项是否应该显示分值给玩家？ → A: **否**，选择前不显示分值（保持悬念），选择后才显示分值和走向说明（满足反馈需求）
+- Q: 如何让玩家了解自己选择的影响？ → A: 选择后展示三要素：1) 选择内容 2) 分值变化 3) 选择后的走向说明
+- Q: AI生成选项时分值是否需要多样化？ → A: **是**，分值应在-10到+10范围内合理分布，避免都是0
+- Q: 下一场景应该如何生成？ → A: 必须基于"当前场景描述 + 玩家选择 + 选择结果"生成，保持故事连贯性
+- Q: 每次新游戏是否应该复用缓存的初始场景？ → A: **否**，每次都生成全新场景，提升重玩价值和新鲜感
+- Q: 是否需要独立的内容审核API？ → A: **否**，通过AI提示词控制内容质量即可，避免不必要的API调用和系统复杂度
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
@@ -43,6 +52,8 @@
 1. **Given** 玩家访问游戏首页，**When** 选择"创业人生"类型，**Then** 系统显示初始身份、资源和目标，并生成第一个情节节点
 2. **Given** 玩家选择了人生类型，**When** 点击"开始游戏"，**Then** 系统显示第一个场景描述和3-5个选项供选择
 3. **Given** 玩家开始新游戏，**When** 系统初始化，**Then** 玩家分数为50，游戏状态为进行中
+4. **Given** 玩家完成一局游戏，**When** 再次开始相同类型的新游戏，**Then** 系统生成全新的初始场景而非复用之前的场景（保持新鲜感）
+5. **Given** 系统生成初始场景，**When** 显示选项，**Then** 选项不显示分值（保持悬念），但每个选项都有明确的行动描述
 
 ---
 
@@ -56,9 +67,36 @@
 
 **Acceptance Scenarios**:
 
-1. **Given** 玩家在场景中看到选项，**When** 选择"努力工作"，**Then** 系统显示分数变化、理由摘要和下一个场景
-2. **Given** 玩家当前分数为60，**When** 选择+20分的选项，**Then** 分数变为80，系统显示"你的努力得到了回报"
-3. **Given** 玩家做出选择，**When** 系统处理，**Then** 在数据库中记录选择、分数变化和AI生成的提示词
+1. **Given** 玩家在场景中看到选项，**When** 点击某个选项，**Then** 该选项被高亮显示，其他选项被禁用
+2. **Given** 玩家选择了选项，**When** 系统处理选择，**Then** 显示加载动画，并在动画中展示：
+   - 玩家选择的内容（清晰展示）
+   - 分数变化（+10/-5/0等，带颜色标识）
+   - 选择后的走向说明（这个选择会带来什么影响）
+3. **Given** 玩家当前分数为60，**When** 选择+10分的选项，**Then** 分数变为70，加载动画显示"+10分"及走向说明
+4. **Given** 系统生成下一个场景，**When** 场景加载完成，**Then** 显示基于"前场景描述+玩家选择+选择结果"生成的新场景，确保故事连贯性
+5. **Given** 玩家做出选择，**When** 系统处理，**Then** 在数据库中记录选择、分数变化和AI生成的提示词
+6. **Given** 场景切换完成，**When** 新场景显示，**Then** 场景编号正确递增（场景1→场景2→场景3...），选项状态被重置
+
+---
+
+### User Story 2.5 - AI生成内容质量保证 (Priority: P1)
+
+系统使用AI生成的场景和选项必须符合质量标准，确保玩家体验流畅。
+
+**Why this priority**: AI生成内容的质量直接影响游戏体验，如果生成的内容不合理或不连贯，会严重影响玩家的游戏体验。
+
+**Independent Test**: 可以独立测试AI生成的场景描述、选项文本、分值分布、走向说明是否符合质量标准。
+
+**Acceptance Scenarios**:
+
+1. **Given** AI生成选项，**When** 返回选项数据，**Then** 每个选项必须包含三要素：text（行动描述）、scoreImpact（分值）、reasoning（走向说明）
+2. **Given** AI生成选项的分值，**When** 检查分值分布，**Then** 分值应在-10到+10范围内（-10/-5/0/+5/+10），不应该全部为0
+3. **Given** AI生成场景描述，**When** 检查描述长度，**Then** 场景描述应在150-300字以内，选项描述应在20-50字以内
+4. **Given** AI生成选项，**When** 检查选项质量，**Then** 选项应该有具体行动描述，避免"继续前进"、"谨慎行事"等通用词汇
+5. **Given** AI生成下一个场景，**When** 基于玩家选择生成，**Then** 新场景必须体现玩家选择的影响，保持故事连贯性
+6. **Given** AI生成初始场景，**When** 多次生成相同人生类型，**Then** 每次应生成不同的初始场景，提供新鲜感
+7. **Given** AI生成内容，**When** 系统处理，**Then** 通过提示词控制内容质量和主题一致性，确保内容适当性
+8. **Given** AI返回数据，**When** 解析响应，**Then** 响应必须是有效的JSON格式，包含所有必需字段
 
 ---
 
@@ -114,7 +152,11 @@
 - 当玩家分数计算超出0-100范围时如何处理？系统应该将分数限制在有效范围内，并记录异常情况
 - 当数据库中的场景模板损坏或缺失时如何处理？系统应该使用默认模板或显示错误信息
 - 当玩家在游戏进行中刷新页面时如何处理？系统应该恢复游戏状态或提供继续游戏的选项
-- 当AI生成的内容包含不当内容时如何处理？系统应该使用内容审核机制过滤不当内容
+- 当AI生成的内容包含不当内容时如何处理？系统通过严格的提示词控制内容质量和主题一致性，避免生成不当内容（内容审核机制为可选功能，当前待实现）
+- 当AI返回的JSON格式不正确时如何处理？系统应该进行容错解析，提取可用字段，或显示错误并重新生成
+- 当AI生成的选项分值全部为0时如何处理？系统应该检测并拒绝此结果，要求AI重新生成
+- 当场景切换时UI状态未重置时如何处理？系统必须在每次场景切换时正确重置选择状态、加载状态等
+- 当场景编号显示不正确时如何处理？系统应该维护逻辑场景编号，与数据库唯一ID分离
 
 ## Requirements *(mandatory)*
 
@@ -122,7 +164,7 @@
 
 - **FR-001**: System MUST allow players to select from available life types (创业人生, 修真人生, 穿越古代人生等)
 - **FR-002**: System MUST generate initial game state with score 50, life type context, and first scene
-- **FR-003**: System MUST display 3-5 choices per scene with clear descriptions and score impact indicators
+- **FR-003**: System MUST display 3-5 choices per scene with clear descriptions WITHOUT showing score values before selection (to maintain suspense)
 - **FR-004**: System MUST calculate score changes based on player choices and update game state
 - **FR-005**: System MUST generate next scene using AI based on current context and player state
 - **FR-006**: System MUST detect game end conditions (score 0, score 100, or maximum turns reached)
@@ -145,6 +187,32 @@
 - **FR-023**: System MUST use session-based storage for game state and achievements without personal data collection
 
 ### Enhanced Functional Requirements (Based on Development Learnings)
+
+#### Choice Feedback & Result Display Requirements (2025-10-28 Learnings)
+- **FR-024-NEW**: System MUST hide score values from choices BEFORE player selection to maintain suspense and decision-making challenge
+- **FR-025-NEW**: System MUST display comprehensive choice feedback AFTER selection including: 1) selected choice text, 2) score impact with color coding (+green, -red, 0-gray), 3) reasoning/consequence explanation
+- **FR-026-NEW**: System MUST integrate choice feedback into loading animation overlay while generating next scene (utilizing wait time meaningfully)
+- **FR-027-NEW**: System MUST disable all other choices immediately after player selection to prevent multiple submissions
+- **FR-028-NEW**: System MUST visually highlight the selected choice before processing begins
+- **FR-029-NEW**: System MUST properly reset UI state (selected choice, loading state) when transitioning to a new scene
+- **FR-030-NEW**: System MUST maintain separate logical scene numbering (Scene 1, Scene 2...) independent from database unique IDs, stored in JSONB metadata
+
+#### AI Content Generation Quality Requirements (2025-10-28 Learnings)
+- **FR-031-NEW**: System MUST ensure AI-generated choices include all three required fields: text (action description), scoreImpact (numerical value), reasoning (consequence explanation)
+- **FR-032-NEW**: System MUST validate that score values are distributed across the range (-10, -5, 0, +5, +10) and NOT all zero
+- **FR-033-NEW**: System MUST ensure scene descriptions are 150-300 characters and choice descriptions are 20-50 characters
+- **FR-034-NEW**: System MUST reject generic choice wording ("continue forward", "be cautious") and require specific action descriptions
+- **FR-035-NEW**: System MUST generate next scene based on complete context: previous scene description + player's choice + choice consequence
+- **FR-036-NEW**: System MUST generate unique initial scenes for each new game session (NO caching/reusing of first scenes) to maintain replayability
+- **FR-037-NEW**: System MUST request AI responses in structured JSON format rather than free-text for reliable parsing
+- **FR-038-NEW**: System MUST include randomization seeds or diversity instructions in AI prompts to ensure content variety
+
+#### Performance & API Optimization Requirements (2025-10-28 Learnings)
+- **FR-039-NEW**: System MUST minimize AI API calls to ONE per player choice (eliminate redundant reasoning generation or moderation calls)
+- **FR-040-NEW**: System MUST reuse reasoning field from AI-generated choices directly without additional API calls
+- **FR-041-NEW**: System SHOULD control content quality through prompt engineering rather than separate moderation API calls (content moderation as optional future feature)
+
+### Original Enhanced Functional Requirements
 
 #### User Experience & Navigation Requirements
 - **FR-024**: System MUST provide clear URL structure with separate routes for game selection (`/game`) and game play (`/play/[sessionId]`)
@@ -221,8 +289,15 @@
 - **LifeType**: 人生类型实体，包含提示词、初始身份、资源限制、主要目标等属性
 - **GameSession**: 游戏会话实体，包含会话ID、人生类型、当前分数、游戏状态、开始时间等属性（匿名，无个人身份信息）
 - **SceneNode**: 情节节点实体，包含场景ID、描述文本、选项列表、分值规则、下一节点ID等属性
+  - **Enhanced (2025-10-28)**: `next_scene_rules` JSONB字段存储`logicalSceneNumber`（用户可见的场景编号），与数据库唯一ID分离
+  - **Enhanced (2025-10-28)**: `choices`数组中每个选项必须包含三个字段：`text`（行动描述，20-50字）、`scoreImpact`（分值，范围-10到+10）、`reasoning`（走向说明）
+  - **Enhanced (2025-10-28)**: 场景描述必须为150-300字，确保内容适中
 - **PlayerChoice**: 玩家选择实体，包含选择ID、选项文本、分值影响、理由摘要、时间戳等属性
+  - **Enhanced (2025-10-28)**: 必须包含完整的`reasoning`字段，用于向玩家展示选择后果
 - **AIPrompt**: AI提示词实体，包含提示词内容、版本号、创建时间、使用次数等属性
+  - **Enhanced (2025-10-28)**: 提示词必须要求AI返回JSON格式，包含`description`、`choices`（含`content`、`score`、`after`字段）
+  - **Enhanced (2025-10-28)**: 提示词应包含前序场景和玩家选择上下文，确保故事连贯性
+  - **Enhanced (2025-10-28)**: 提示词应包含多样性要求（如随机种子），避免重复内容
 - **Achievement**: 成就实体，包含成就ID、名称、描述、解锁条件、奖励等属性
 - **SessionAchievement**: 会话成就实体，包含会话ID、成就ID、解锁时间、进度等属性（匿名）
 - **Leaderboard**: 排行榜实体，包含人生类型、会话ID、最高分数、排名、更新时间等属性（匿名）
@@ -235,7 +310,7 @@
 - **SC-001**: Players can complete a full game session (from start to end) in under 15 minutes
 - **SC-002**: System generates unique and engaging content for at least 30 scenes per life type
 - **SC-003**: 95% of player choices are processed and result in valid game state updates within 3 seconds
-- **SC-004**: AI-generated content passes content moderation filters 99% of the time
+- **SC-004**: AI-generated content maintains quality standards through prompt engineering 95% of the time (content moderation as optional future feature)
 - **SC-005**: System maintains game state consistency across page refreshes and browser sessions
 - **SC-006**: Administrators can edit content and see changes reflected in new games within 1 minute
 - **SC-007**: 90% of players complete at least one full game session on their first visit
@@ -247,7 +322,27 @@
 
 ### Enhanced Success Criteria (Based on Development Learnings)
 
-#### User Experience & Navigation Success Criteria
+#### Choice Feedback & User Engagement Success Criteria (2025-10-28 Learnings)
+- **SC-013-NEW**: 100% of choices hide score values before selection to maintain player suspense
+- **SC-014-NEW**: 100% of selected choices display complete feedback (text + score + reasoning) during loading animation
+- **SC-015-NEW**: 95% of players report satisfaction with the timing and clarity of choice feedback
+- **SC-016-NEW**: 100% of scene transitions properly reset UI state without visual artifacts or stale data
+- **SC-017-NEW**: Scene numbering displays correctly and sequentially (1, 2, 3...) in 100% of game sessions
+
+#### AI Content Quality Success Criteria (2025-10-28 Learnings)
+- **SC-018-NEW**: 95% of AI-generated choices include all three required fields (text, scoreImpact, reasoning)
+- **SC-019-NEW**: 90% of AI-generated choice sets have varied score distribution (not all zeros)
+- **SC-020-NEW**: 95% of scene descriptions meet length requirements (150-300 chars) and quality standards
+- **SC-021-NEW**: 90% of choices use specific action descriptions rather than generic phrases
+- **SC-022-NEW**: 95% of generated scenes demonstrate clear narrative continuity from previous scene and choice
+- **SC-023-NEW**: 100% of new game sessions generate unique initial scenes (0% cache reuse rate)
+
+#### Performance & Efficiency Success Criteria (2025-10-28 Learnings)
+- **SC-024-NEW**: 100% of player choices result in exactly ONE AI API call (no redundant calls)
+- **SC-025-NEW**: Average AI response time remains under 3 seconds for scene generation
+- **SC-026-NEW**: System successfully parses 98% of AI JSON responses without fallback to error handling
+
+#### Original User Experience & Navigation Success Criteria
 - **SC-013**: 100% of users can navigate between game selection and game play pages without confusion
 - **SC-014**: System maintains 99% uptime even when database services are unavailable through graceful degradation
 - **SC-015**: 95% of users complete their first game session without requiring assistance or documentation
@@ -357,16 +452,26 @@
 - **模块化架构**: 清晰的组件分离使代码更易维护和扩展
 - **类型安全**: 完整的TypeScript类型定义减少了运行时错误
 - **错误处理**: 完善的错误边界和降级机制确保系统稳定性
+- **API调用优化**: 每次操作只调用必要的AI接口，避免重复调用（如移除冗余的推理生成）
+- **数据复用**: 选项自带的reasoning字段直接使用，无需额外AI调用生成
+- **功能取舍**: 非核心功能（如内容审核）可通过提示词控制，减少系统复杂度
 
 #### 用户体验成功因素
 - **响应式设计**: 多设备支持扩大了用户群体
 - **直观导航**: 清晰的页面层次结构降低了学习成本
 - **即时反馈**: 实时的分数更新和成就提示增强了参与度
+- **信息渐进披露**: 选择前隐藏分值保持悬念，选择后展示结果满足好奇心
+- **等待时间利用**: 在AI生成场景时展示选择结果，让等待变得有意义
+- **结果可见性**: 选择后需要充分展示分值和走向说明，让玩家理解决策影响
 
 #### 内容成功因素
 - **多样性**: 5种不同的人生类型提供了丰富的选择
 - **一致性**: 严格的内容审核确保了质量
 - **个性化**: AI生成的内容使每次游戏都不同
+- **故事连贯性**: 基于上一场景和玩家选择生成下一场景，保持叙事流畅
+- **新鲜感保持**: 每次新游戏生成全新开场，而非复用缓存，提升重玩价值
+- **选项深度**: 每个选项包含行动、分值、走向说明三要素，让选择更有意义
+- **分值合理性**: 选项分值分布应合理（-10到+10），避免全0或极端化
 
 ### 风险缓解经验
 
@@ -415,13 +520,35 @@
 - **早期验证**: 尽早验证核心功能避免后期重构
 - **用户体验优先**: 技术实现应该服务于用户体验
 - **错误处理**: 完善的错误处理比功能实现更重要
+- **场景状态管理**: 场景切换时必须正确重置UI状态，避免残留上一场景的信息
+- **逻辑与显示分离**: 数据库唯一标识和用户可见编号应该分开管理
+
+#### AI集成教训
+- **提示词即控制**: 通过精心设计的提示词可以替代复杂的后处理逻辑
+- **多样性设计**: AI生成内容需要主动要求多样性，否则易产生重复模式
+- **上下文传递**: 将前序场景和玩家选择传给AI，是保持故事连贯的关键
+- **JSON优于文本**: 要求AI返回JSON格式比解析自然语言文本更可靠
+- **性能优先**: 能在一次AI调用中完成的工作，就不要拆成多次调用
 
 #### 产品教训
 - **简单有效**: 简单的功能比复杂的功能更容易成功
 - **用户反馈**: 持续收集用户反馈是产品改进的关键
 - **迭代开发**: 小步快跑比大而全的开发更有效
 
+#### 游戏体验设计教训
+- **悬念与反馈的平衡**: 选择前隐藏分值保持悬念，选择后立即展示满足好奇心，两者缺一不可
+- **等待的艺术**: 不可避免的等待时间应该展示有意义的内容，而非空白加载
+- **信息的时机**: 给玩家足够的时间消化选择结果，再进入下一场景
+- **选项的质量**: 每个选项都应该有具体行动、明确后果、合理分值，让选择有重量感
+- **重复的价值**: 即使是相同类型的游戏，每次也应该有新体验，避免"第二次就腻了"
+
 #### 技术教训
 - **类型安全**: 投资类型安全在长期维护中会得到回报
 - **模块化**: 清晰的模块分离使代码更易理解和维护
 - **测试覆盖**: 全面的测试覆盖是代码质量的保证
+
+#### 数据设计教训
+- **双编号系统**: 数据库唯一ID用于技术查询，逻辑编号用于用户展示，两者分离避免混淆
+- **灵活的元数据**: JSONB字段存储额外信息（如logicalSceneNumber）提供了扩展性
+- **AI输出结构化**: 要求AI返回JSON而非自由文本，大幅简化解析和验证逻辑
+- **字段完整性**: 选项数据应包含text、scoreImpact、reasoning三个字段，缺一不可
