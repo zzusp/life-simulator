@@ -84,12 +84,17 @@ export default function HistoryDetailPage() {
         }
       })
 
+      // 兼容 Supabase 关系查询可能返回数组的情况
+      const lifeTypeRow = Array.isArray(session.life_types)
+        ? session.life_types[0]
+        : session.life_types
+
       const historyDetail: HistoryDetail = {
         id: session.id,
-        lifeType: session.life_types?.name || '未知类型',
-        lifeTypeDescription: session.life_types?.description || '',
-        initialIdentity: session.life_types?.initial_identity || '',
-        mainGoals: session.life_types?.main_goals || [],
+        lifeType: lifeTypeRow?.name || '未知类型',
+        lifeTypeDescription: lifeTypeRow?.description || '',
+        initialIdentity: lifeTypeRow?.initial_identity || '',
+        mainGoals: (lifeTypeRow?.main_goals as string[]) || [],
         finalScore: session.current_score,
         choicesMade: session.choices_made?.length || 0,
         startedAt: session.started_at,
