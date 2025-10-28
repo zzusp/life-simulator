@@ -1,6 +1,5 @@
 import { supabase, supabaseAdmin } from './supabase'
 import { aiService } from './ai'
-import { moderator } from './moderator'
 import { GameSession, SceneNode, LifeType, Choice, PlayerChoice } from '@/types/game'
 import { generateSessionId, clampScore } from './utils'
 
@@ -106,71 +105,37 @@ export class GameEngine {
   // 生成初始场景
   private async generateInitialScene(lifeType: LifeType, sessionId: string): Promise<SceneNode> {
     try {
-      // 首先检查是否已存在该人生类型的初始场景
-      const { data: existingScene, error: queryError } = await supabase
-        .from('scene_nodes')
-        .select('*')
-        .eq('life_type_id', lifeType.id)
-        .eq('scene_number', 1)
-        .single()
-
-      if (queryError && queryError.code !== 'PGRST116') { // PGRST116 = 没有找到记录
-        console.error('查询现有场景失败:', queryError)
-        throw new Error('查询现有场景失败')
-      }
-
-      // 如果已存在初始场景，直接返回
-      if (existingScene) {
-        console.log('使用现有初始场景:', existingScene.id)
-        return {
-          id: existingScene.id,
-          lifeTypeId: existingScene.life_type_id,
-          sceneNumber: existingScene.scene_number,
-          title: existingScene.title,
-          description: existingScene.description,
-          aiGeneratedContent: existingScene.ai_generated_content,
-          choices: existingScene.choices,
-          nextSceneRules: existingScene.next_scene_rules,
-          isEndingScene: existingScene.is_ending_scene,
-          version: existingScene.version,
-          createdAt: existingScene.created_at,
-          updatedAt: existingScene.updated_at
-        }
-      }
-
-      // 如果不存在，则创建新的初始场景
-      console.log('创建新的初始场景')
+      // 每次都生成新的初始场景，给玩家新鲜感
+      console.log('生成全新的初始场景')
+      
+      // 添加随机种子以增加场景多样性
+      const randomSeed = Math.floor(Math.random() * 10000)
       
       // 构建AI提示词
-      const prompt = `你是一个专业的游戏情节设计师。请为以下人生类型生成初始场景：
+      const prompt = `[场景生成请求 #${randomSeed}]
 
-人生类型：${lifeType.name}
-世界观：${lifeType.worldviewPrompt}
-初始身份：${lifeType.initialIdentity}
-资源：${JSON.stringify(lifeType.resources)}
-限制：${JSON.stringify(lifeType.constraints)}
-主要目标：${lifeType.mainGoals.join(', ')}
+请为以下人生类型生成一个全新的、独特的初始场景：
 
-请生成一个引人入胜的初始场景，包含场景描述和3-5个选择选项。
+【人生类型设定】
+- 名称：${lifeType.name}
+- 世界观：${lifeType.worldviewPrompt}
+- 初始身份：${lifeType.initialIdentity}
+- 初始资源：${JSON.stringify(lifeType.resources)}
+- 限制条件：${JSON.stringify(lifeType.constraints)}
+- 主要目标：${lifeType.mainGoals.join(', ')}
 
-要求：
-- 场景描述：控制在150-300字以内
-- 每个选择选项：控制在20-50字以内，要具体、有意义
-- 选择选项应该结合剧情场景，给出具体的行动方案
-- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇
-- 每个选项都应该结合当前场景，给出明确的行动描述
-- 不要显示分值，让玩家根据具体情况判断
-- 确保内容简洁明了，便于玩家快速理解
+【重要：多样性要求】
+- 请发挥创意，生成一个与众不同的开场情节
+- 可以从不同的时间点、不同的事件、不同的场景氛围切入
+- 确保每次生成的场景都有新鲜感和独特性
+- 场景应该引人入胜，让玩家快速代入角色
 
-请按以下格式输出：
-场景描述：[你的场景描述]
-
-选择选项：
-1. [具体行动选项1]
-2. [具体行动选项2]
-3. [具体行动选项3]
-4. [具体行动选项4]
-5. [具体行动选项5]`
+【生成要求】
+- 场景描述：控制在150-300字以内，要具体生动
+- 生成3-5个选择选项，每个选项20-50字
+- 每个选项都要有明确的行动描述和对应的分数影响（-10, -5, 0, 5, 10）
+- 每个选项要有"选择后的走向说明"，描述这个选择会带来什么结果
+- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇`
 
       // 使用AI生成场景
       const aiResponse = await aiService.generateScene(prompt, {
@@ -179,27 +144,29 @@ export class GameEngine {
         sceneNumber: 1
       })
 
-      // 内容审核
-      const moderationResult = await moderator.checkContent(aiResponse.content)
-      if (!moderationResult.isSafe) {
-        throw new Error('生成的内容包含不当信息')
-      }
+      // 内容审核已移除，减少API调用
+
+      // 为初始场景生成唯一的scene_number（使用时间戳+随机数）
+      const timestamp = Date.now()
+      const randomSuffix = Math.floor(Math.random() * 10000)
+      const uniqueSceneNumber = 1 * 100000 + timestamp % 100000 + randomSuffix
 
       // 创建场景节点
       const sceneNode = {
         life_type_id: lifeType.id,
-        scene_number: 1,
+        scene_number: uniqueSceneNumber,
         title: '游戏开始',
         description: aiResponse.content,
         ai_generated_content: aiResponse.content,
         choices: aiResponse.choices,
-        next_scene_rules: {},
+        next_scene_rules: { logicalSceneNumber: 1 },
         is_ending_scene: false,
         version: 1
       }
 
-      // 保存到数据库（匿名用户可以创建场景节点）
-      const { data: sceneData, error: sceneError } = await supabase
+      // 插入新场景
+      console.log('准备插入新场景...')
+      const { data: sceneData, error: sceneError } = await supabaseAdmin
         .from('scene_nodes')
         .insert(sceneNode)
         .select()
@@ -207,14 +174,17 @@ export class GameEngine {
 
       if (sceneError) {
         console.error('保存场景失败:', sceneError)
+        console.error('场景节点内容:', JSON.stringify(sceneNode, null, 2))
         throw new Error(`保存场景失败: ${sceneError.message || '未知错误'}`)
       }
+      
+      console.log('场景保存成功，ID:', sceneData?.id)
 
       // 转换数据库字段名为前端期望的格式
       return {
         id: sceneData.id,
         lifeTypeId: sceneData.life_type_id,
-        sceneNumber: sceneData.scene_number,
+        sceneNumber: sceneData.next_scene_rules?.logicalSceneNumber || 1,
         title: sceneData.title,
         description: sceneData.description,
         aiGeneratedContent: sceneData.ai_generated_content,
@@ -276,22 +246,8 @@ export class GameEngine {
       const scoreChange = choice.scoreImpact
       const newScore = clampScore(session.current_score + scoreChange)
 
-      // 生成推理分析
-      const reasoningPrompt = `请分析以下选择的影响：
-
-选择：${choice.text}
-当前分数：${session.current_score}
-场景：${currentScene.description}
-分数变化：${scoreChange > 0 ? '+' : ''}${scoreChange}
-
-请分析这个选择对游戏进程的影响，并给出分数变化的理由。`
-
-      const reasoning = await aiService.generateReasoning(reasoningPrompt, {
-        choice: choice.text,
-        currentScore: session.current_score,
-        sceneDescription: currentScene.description,
-        scoreChange
-      })
+      // 使用选项自带的reasoning（AI生成选项时已提供）
+      const reasoning = choice.reasoning || '你做出了选择'
 
       // 检查成就
       const achievements = await this.checkAchievements(session, newScore, currentScene)
@@ -305,7 +261,7 @@ export class GameEngine {
         choiceText: choice.text,
         scoreImpact: choice.scoreImpact,
         reasoningSummary: reasoning,
-        aiPromptUsed: reasoningPrompt,
+        aiPromptUsed: '', // 不再需要AI推理
         createdAt: new Date().toISOString()
       }
 
@@ -340,7 +296,12 @@ export class GameEngine {
       // 生成下一个场景（如果游戏未结束）
       let nextScene: SceneNode | null = null
       if (!isEnding) {
-        nextScene = await this.generateNextScene(currentScene, newScore, session.life_type_id)
+        nextScene = await this.generateNextScene(
+          currentScene, 
+          newScore, 
+          session.life_type_id,
+          choice
+        )
         
         // 更新会话的当前场景
         await supabase
@@ -367,39 +328,44 @@ export class GameEngine {
   }
 
   // 生成下一个场景
-  private async generateNextScene(currentScene: SceneNode, currentScore: number, lifeTypeId: string): Promise<SceneNode> {
+  private async generateNextScene(
+    currentScene: SceneNode, 
+    currentScore: number, 
+    lifeTypeId: string,
+    playerChoice?: { text: string; scoreImpact: number; reasoning: string }
+  ): Promise<SceneNode> {
     try {
       // 确保场景编号有效
       const currentSceneNumber = currentScene.sceneNumber || 1
       const nextSceneNumber = currentSceneNumber + 1
       
-      // 构建AI提示词
-      const prompt = `你是一个专业的游戏情节设计师。请根据以下信息生成下一个场景：
+      // 构建AI提示词，包含玩家选择的信息
+      let choiceContext = ''
+      if (playerChoice) {
+        choiceContext = `
+玩家的选择：${playerChoice.text}
+选择结果：${playerChoice.reasoning}
+分数变化：${playerChoice.scoreImpact > 0 ? '+' : ''}${playerChoice.scoreImpact}分
 
-当前场景：${currentScene.description}
-当前分数：${currentScore}
-场景编号：${nextSceneNumber}
+`
+      }
+      
+      const prompt = `请根据以下信息生成下一个场景：
 
-请生成一个符合游戏主题的新场景，包含场景描述和3-5个选择选项。
+【上一个场景】
+${currentScene.description}
 
-要求：
-- 场景描述：控制在150-300字以内
-- 每个选择选项：控制在20-50字以内，要具体、有意义
-- 选择选项应该结合剧情场景，给出具体的行动方案
-- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇
-- 每个选项都应该结合当前场景，给出明确的行动描述
-- 不要显示分值，让玩家根据具体情况判断
-- 确保内容简洁明了，便于玩家快速理解
+${choiceContext}【当前状态】
+- 当前分数：${currentScore}
+- 场景编号：${nextSceneNumber}
 
-请按以下格式输出：
-场景描述：[你的场景描述]
-
-选择选项：
-1. [具体行动选项1]
-2. [具体行动选项2]
-3. [具体行动选项3]
-4. [具体行动选项4]
-5. [具体行动选项5]`
+【生成要求】
+- 新场景必须基于玩家在上个场景的选择和结果来展开，确保故事的连贯性
+- 场景描述应该体现出玩家选择的影响和后续发展
+- 场景描述：控制在150-300字以内，要具体生动
+- 生成3-5个选择选项，每个选项20-50字
+- 每个选项都要有明确的行动描述和对应的分数影响（-10, -5, 0, 5, 10）
+- 每个选项要有"选择后的走向说明"，描述这个选择会带来什么结果`
 
       // 使用AI生成场景
       const aiResponse = await aiService.generateScene(prompt, {
@@ -407,11 +373,7 @@ export class GameEngine {
         sceneNumber: nextSceneNumber
       })
 
-      // 内容审核
-      const moderationResult = await moderator.checkContent(aiResponse.content)
-      if (!moderationResult.isSafe) {
-        throw new Error('生成的内容包含不当信息')
-      }
+      // 内容审核已移除，减少API调用
 
       // 为后续场景使用唯一的场景编号，避免冲突
       // 使用重试机制确保唯一性
@@ -450,7 +412,7 @@ export class GameEngine {
         description: aiResponse.content,
         ai_generated_content: aiResponse.content,
         choices: aiResponse.choices,
-        next_scene_rules: {},
+        next_scene_rules: { logicalSceneNumber: nextSceneNumber },
         is_ending_scene: false,
         version: 1
       }
@@ -543,7 +505,7 @@ export class GameEngine {
       return {
         id: data.id,
         lifeTypeId: data.life_type_id,
-        sceneNumber: data.scene_number,
+        sceneNumber: data.next_scene_rules?.logicalSceneNumber || data.scene_number,
         title: data.title,
         description: data.description,
         aiGeneratedContent: data.ai_generated_content,

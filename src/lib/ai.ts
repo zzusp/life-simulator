@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { AIPrompt, AIResponse, ModerationResult } from '@/types/game'
+import { AIPrompt, AIResponse } from '@/types/game'
 
 // 初始化OpenAI客户端
 const openai = new OpenAI({
@@ -35,29 +35,30 @@ export class AIService {
     }
 
     try {
-        const response = await openai.chat.completions.create({
-          model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: '你是一个专业的游戏情节设计师。请根据用户提供的信息生成游戏场景，包含场景描述和3-5个选择选项。\n\n要求：\n- 场景描述：控制在150-300字以内\n- 每个选择选项：控制在20-50字以内，要具体、有意义\n- 选择选项应该结合剧情场景，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该结合当前场景，给出明确的行动描述\n- 不要显示分值，让玩家根据具体情况判断\n- 确保内容简洁明了，便于玩家快速理解\n\n请按以下格式输出：\n场景描述：[你的场景描述]\n\n选择选项：\n1. [具体行动选项1]\n2. [具体行动选项2]\n3. [具体行动选项3]\n4. [具体行动选项4]\n5. [具体行动选项5]'
-            },
-            {
-              role: 'user',
-              content: this.replaceVariables(prompt, variables)
-            }
-          ],
-          temperature: 0.8,
-          max_tokens: 2000, // 增加token限制以支持更长的内容
-        })
+      const response = await openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个专业的游戏设计师。请为场景生成选择选项。\n\n要求：\n- 场景描述：控制在150-300字以内\n- 每个选择选项：控制在20-50字以内，要具体、有意义，并带有一定的趣味性\n- 选择选项应该反映于场景描述的世界中的人生决策，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该有明确的行动描述\n- 要给出分值，且分值的加减与选项内容、选择后走向的变化一致\n- 分值范围：-10（高风险高损失）、-5（中等损失）、0（无变化）、5（中等收益）、10（高风险高回报）\n- 确保选项简洁明了，便于玩家快速决策\n\n请严格按以下JSON格式输出场景描述和选项：\n{\n  "description": "场景描述文本",\n  "choices": [\n    {\n      "content": "选项内容",\n      "score": -10,\n      "after": "选择后的走向说明"\n    }\n  ]\n}'
+          },
+          {
+            role: 'user',
+            content: this.replaceVariables(prompt, variables)
+          }
+        ],
+        temperature: 0.8,
+        max_tokens: 2000,
+        response_format: { type: "json_object" }
+      })
 
       const content = response.choices[0]?.message?.content || ''
       const result = this.parseAIResponse(content)
-        
+
         // 缓存结果
         this.cache.set(cacheKey, result)
         this.manageCache()
-        
+
         return result
       } catch (error: any) {
       console.error('AI场景生成失败:', error)
@@ -66,12 +67,12 @@ export class AIService {
           if (error.status === 429 || error.code === 429) {
             throw new Error('AI服务暂时繁忙，请稍后重试')
           }
-          
+
           // 处理其他AI错误
           if (error.message?.includes('Rate limit') || error.message?.includes('quota')) {
             throw new Error('AI服务暂时繁忙，请稍后重试')
           }
-          
+
       throw new Error(`场景生成遇到问题，请稍后重试`)
         }
   }
@@ -85,44 +86,45 @@ export class AIService {
       return this.cache.get(cacheKey)
     }
 
-      try {
-        const response = await openai.chat.completions.create({
-          model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: '你是一个专业的游戏设计师。请为给定的场景生成3-5个选择选项。\n\n要求：\n- 每个选择选项：控制在20-50字以内，要具体、有意义\n- 选择选项应该反映真实的人生决策，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该有明确的行动描述，如"直接申请这个职位"、"先做兼职积累经验"等\n- 不要显示分值，让玩家根据具体情况判断\n- 确保选项简洁明了，便于玩家快速决策'
-            },
-            {
-              role: 'user',
-              content: this.replaceVariables(prompt, variables)
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 1500, // 增加token限制以支持更长的选择内容
-        })
+    try {
+      const response = await openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个专业的游戏设计师。请为给定的场景生成3-5个选择选项。\n\n要求：\n- 每个选择选项：控制在20-50字以内，要具体、有意义，并带有一定的趣味性\n- 选择选项应该反映于场景描述的世界中的人生决策，给出具体的行动方案\n- 不要使用"继续前进"、"谨慎行事"、"大胆尝试"等通用词汇\n- 每个选项都应该有明确的行动描述\n- 要给出分值，且分值的加减与选项内容、选择后走向的变化一致\n- 分值范围：-10（高风险高损失）、-5（中等损失）、0（无变化）、5（中等收益）、10（高风险高回报）\n- 确保选项简洁明了，便于玩家快速决策\n\n请严格按以下JSON格式输出选项数组：\n{\n  "choices": [\n    {\n      "content": "选项内容",\n      "score": -10,\n      "after": "选择后的走向说明"\n    }\n  ]\n}'
+          },
+          {
+            role: 'user',
+            content: this.replaceVariables(prompt, variables)
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+        response_format: { type: "json_object" }
+      })
 
         const content = response.choices[0]?.message?.content || ''
         const result = this.parseAIResponse(content)
-        
+
         // 缓存结果
         this.cache.set(cacheKey, result)
         this.manageCache()
-        
+
         return result
       } catch (error: any) {
       console.error('AI选择生成失败:', error)
-        
+
           // 处理速率限制错误
           if (error.status === 429 || error.code === 429) {
             throw new Error('AI服务暂时繁忙，请稍后重试')
           }
-          
+
           // 处理其他AI错误
           if (error.message?.includes('Rate limit') || error.message?.includes('quota')) {
             throw new Error('AI服务暂时繁忙，请稍后重试')
           }
-          
+
       throw new Error(`选择生成遇到问题，请稍后重试`)
         }
   }
@@ -177,69 +179,6 @@ export class AIService {
     }
   }
 
-  // 内容审核
-  async moderateContent(content: string): Promise<ModerationResult> {
-    try {
-      // 检查是否使用OpenRouter（不支持内容审核）
-      if (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.includes('openrouter.ai')) {
-        console.warn('OpenRouter不支持内容审核API，跳过审核')
-        return {
-          isSafe: true,
-          categories: [],
-          confidence: 0,
-          details: null
-        }
-      }
-
-      const response = await openai.moderations.create({
-        input: content,
-      })
-
-      // 检查响应结构
-      if (!response || !response.results || !Array.isArray(response.results) || response.results.length === 0) {
-        console.warn('内容审核API返回异常结构，默认认为内容安全')
-        return {
-          isSafe: true,
-          categories: [],
-          confidence: 0,
-          details: null
-        }
-      }
-
-      const result = response.results[0]
-      
-      // 检查结果结构
-      if (!result || typeof result.flagged !== 'boolean') {
-        console.warn('内容审核结果结构异常，默认认为内容安全')
-        return {
-          isSafe: true,
-          categories: [],
-          confidence: 0,
-          details: null
-        }
-      }
-      
-      return {
-        isSafe: !result.flagged,
-        categories: Object.keys(result.categories || {}).filter(
-          key => result.categories[key as keyof typeof result.categories]
-        ),
-        confidence: Math.max(...Object.values(result.category_scores || {})),
-        details: result
-      }
-    } catch (error) {
-      console.error('内容审核失败:', error)
-      // 审核失败时默认通过
-      return {
-        isSafe: true,
-        categories: [],
-        confidence: 0,
-        details: null
-      }
-    }
-  }
-
-
   // 替换变量
   private replaceVariables(template: string, variables: Record<string, any>): string {
     let result = template
@@ -262,9 +201,20 @@ export class AIService {
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0])
         console.log('解析JSON响应:', parsed)
+
+        // 映射新的JSON结构到现有的Choice类型
+        let mappedChoices: any[] = []
+        if (parsed.choices && Array.isArray(parsed.choices)) {
+          mappedChoices = parsed.choices.map((choice: any) => ({
+            text: choice.content || choice.text || '',
+            scoreImpact: choice.score !== undefined ? choice.score : (choice.scoreImpact || 0),
+            reasoning: choice.after || choice.reasoning || ''
+          }))
+        }
+
         return {
-          content: parsed.content || content,
-          choices: parsed.choices || [],
+          content: parsed.description || parsed.content || content,
+          choices: mappedChoices,
           reasoning: parsed.reasoning || '',
           nextSceneId: parsed.nextSceneId
         }
@@ -279,43 +229,52 @@ export class AIService {
       let isInChoices = false
       let isInSceneDescription = false
 
-      for (const line of lines) {
+      console.log('开始解析内容，共', lines.length, '行')
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
         const trimmedLine = line.trim()
         
+        console.log(`处理第${i}行:`, trimmedLine)
+
         // 检查是否是场景描述开始
-        if (trimmedLine.startsWith('场景描述') || trimmedLine.startsWith('场景：')) {
+        if (trimmedLine.match(/^场景描述[：:]|^场景[：:]/)) {
           isInSceneDescription = true
           isInChoices = false
-          const sceneText = trimmedLine.replace(/^(场景描述|场景)[:：]\s*/, '')
+          const sceneText = trimmedLine.replace(/^(场景描述|场景)[：:]\s*/, '')
           if (sceneText) {
             sceneContent = sceneText
           }
+          console.log('进入场景描述模式')
           continue
         }
         
         // 检查是否是选择选项开始
-        if (trimmedLine.startsWith('选择选项') || trimmedLine.startsWith('选择：') || trimmedLine.startsWith('选项：')) {
+        if (trimmedLine.match(/^选择选项[：:]|^选择[：:]|^选项[：:]/)) {
           isInChoices = true
           isInSceneDescription = false
+          console.log('进入选择选项模式')
           continue
         }
         
-        // 检查是否是选择选项
-        if (isInChoices && trimmedLine.match(/^\d+\./)) {
-          const choiceMatch = trimmedLine.match(/(\d+)\.\s*(.+?)(?:\s*\(([+-]?\d+)\))?/)
-          if (choiceMatch) {
-            const choiceText = choiceMatch[2].trim()
-            // 过滤掉无效的选择文本
-            if (choiceText && choiceText !== '*' && choiceText.length > 1) {
-              choices.push({
-                text: choiceText,
-                scoreImpact: choiceMatch[3] ? parseInt(choiceMatch[3]) : 0,
-                reasoning: ''
-              })
-            }
+        // 检查是否是选择选项 - 简化匹配逻辑
+        const choiceMatch = trimmedLine.match(/^(\d+)[.）)]\s*(.+)/)
+        if (choiceMatch && isInChoices) {
+          const choiceText = choiceMatch[2].trim()
+          console.log('匹配到选择:', choiceText)
+          if (choiceText && choiceText !== '*' && choiceText.length > 1) {
+            choices.push({
+              text: choiceText,
+              scoreImpact: 0,
+              reasoning: ''
+            })
           }
-        } else if (isInSceneDescription && trimmedLine && !trimmedLine.startsWith('选择')) {
-          // 收集场景描述内容
+          continue
+        }
+
+        // 收集场景描述内容
+        if (isInSceneDescription && trimmedLine && !trimmedLine.startsWith('选择') &&
+                   !trimmedLine.startsWith('选项') && !trimmedLine.match(/^\d+[.）)]/)) {
           if (sceneContent) {
             sceneContent += '\n' + trimmedLine
           } else {
@@ -325,6 +284,27 @@ export class AIService {
           reasoning = trimmedLine.replace(/^(理由|分析)[:：]\s*/, '')
         } else if (trimmedLine.startsWith('下一场景')) {
           nextSceneId = trimmedLine.replace(/^下一场景[:：]\s*/, '')
+        }
+      }
+
+      // 如果还是没有找到选择，尝试在整个内容中查找编号列表
+      if (choices.length === 0) {
+        console.log('未找到选择，尝试全局搜索')
+        for (const line of lines) {
+          const trimmedLine = line.trim()
+          const choiceMatch = trimmedLine.match(/^(\d+)[.）)]\s*(.+)/)
+          if (choiceMatch) {
+            const choiceText = choiceMatch[2].trim()
+            console.log('全局匹配到选择:', choiceText)
+            if (choiceText && choiceText !== '*' && choiceText.length > 1 &&
+                !choiceText.match(/^(继续|谨慎|大胆)/)) {
+              choices.push({
+                text: choiceText,
+                scoreImpact: 0,
+                reasoning: ''
+              })
+            }
+          }
         }
       }
 
@@ -350,13 +330,13 @@ export class AIService {
     } catch (error) {
       console.error('解析AI响应失败:', error)
       console.log('原始内容:', content)
-      // 返回默认响应
+      // 返回有意义的默认响应，而不是通用词汇
       return {
-        content: content,
+        content: content || '你来到了人生的十字路口，需要做出决定...',
         choices: [
-          { text: '继续前进', scoreImpact: 0, reasoning: '' },
-          { text: '谨慎行事', scoreImpact: -5, reasoning: '谨慎的选择' },
-          { text: '大胆尝试', scoreImpact: 10, reasoning: '勇敢的选择' }
+          { text: '按照计划稳步推进', scoreImpact: 0, reasoning: '你选择了稳健的方式，避免了风险但也错过了机会。' },
+          { text: '采取保守策略，降低风险', scoreImpact: -5, reasoning: '过度保守让你失去了宝贵的发展机会。' },
+          { text: '敢于冒险，追求突破', scoreImpact: 10, reasoning: '你的大胆尝试获得了丰厚的回报！' }
         ],
         reasoning: 'AI响应解析失败，使用默认选项',
         nextSceneId: undefined

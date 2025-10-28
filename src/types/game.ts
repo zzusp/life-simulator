@@ -152,10 +152,11 @@ export interface ScoreImpact {
   conditions?: Record<string, any>
 }
 
-// 内容审核类型
-export interface ModerationResult {
-  isSafe: boolean
-  categories: string[]
-  confidence: number
-  details: Record<string, any>
-}
+// 内容审核类型 - 待实现
+// TODO: 未来可以添加内容审核功能，用于检查AI生成的内容是否安全合规
+// export interface ModerationResult {
+//   isSafe: boolean
+//   categories: string[]
+//   confidence: number
+//   details: Record<string, any> | null
+// }
