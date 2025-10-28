@@ -205,8 +205,8 @@ CREATE POLICY "game_sessions_delete_policy" ON game_sessions FOR DELETE USING (f
 -- 场景节点：所有人可读
 CREATE POLICY "scene_nodes_select_policy" ON scene_nodes FOR SELECT USING (true);
 CREATE POLICY "scene_nodes_insert_policy" ON scene_nodes FOR INSERT WITH CHECK (true); -- 允许匿名用户创建场景节点
-CREATE POLICY "scene_nodes_update_policy" ON scene_nodes FOR UPDATE USING (false); -- 仅管理员
-CREATE POLICY "scene_nodes_delete_policy" ON scene_nodes FOR DELETE USING (false); -- 仅管理员
+CREATE POLICY "scene_nodes_update_policy" ON scene_nodes FOR UPDATE USING (true); -- 允许匿名用户更新场景节点
+CREATE POLICY "scene_nodes_delete_policy" ON scene_nodes FOR DELETE USING (true); -- 允许匿名用户删除场景节点
 
 -- 玩家选择：基于session_id访问
 CREATE POLICY "player_choices_select_policy" ON player_choices FOR SELECT USING (true);
