@@ -203,6 +203,21 @@ export default function PlayPage() {
     )
   }
 
+  // 若游戏已结束，优先展示结果（即使 currentScene 为空也不阻塞）
+  if (gameSession && lifeType && (gameSession.gameState === 'completed' || gameSession.completedAt)) {
+    return (
+      <GameResult
+        session={gameSession}
+        lifeType={lifeType}
+        endReason={gameSession.endReason}
+        endingType={gameSession.endingType}
+        onRestart={handleRestart}
+        onViewHistory={handleViewHistory}
+        onShare={handleShare}
+      />
+    )
+  }
+
   if (!gameSession || !currentScene || !lifeType) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -221,20 +236,7 @@ export default function PlayPage() {
     )
   }
 
-  // 游戏结束，显示结果
-  if (gameSession.gameState === 'completed') {
-    return (
-      <GameResult
-        session={gameSession}
-        lifeType={lifeType}
-        endReason={gameSession.endReason}
-        endingType={gameSession.endingType}
-        onRestart={handleRestart}
-        onViewHistory={handleViewHistory}
-        onShare={handleShare}
-      />
-    )
-  }
+  // 游戏进行中展示场景
 
   // 游戏进行中，显示场景
   return (

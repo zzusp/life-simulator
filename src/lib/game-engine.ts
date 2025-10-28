@@ -286,6 +286,7 @@ export class GameEngine {
         updatedSession.game_state = 'completed'
         updatedSession.completed_at = new Date().toISOString()
         updatedSession.end_reason = endReason
+        updatedSession.ending_type = endResult.endingType
       }
 
       await supabase
@@ -475,7 +476,9 @@ ${choiceContext}【当前状态】
         achievementsUnlocked: data.achievements_unlocked || [],
         startedAt: data.started_at,
         lastActivityAt: data.last_activity_at,
-        completedAt: data.completed_at
+        completedAt: data.completed_at,
+        endReason: data.end_reason,
+        endingType: data.ending_type
       }
     } catch (error) {
       console.error('获取游戏会话失败:', error)
