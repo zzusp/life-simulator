@@ -51,6 +51,8 @@ OPENAI_API_KEY=
 OPENAI_BASE_URL=
 # 可选：自定义模型（默认 gpt-3.5-turbo）
 OPENAI_MODEL=
+# 可选：Token（使用deepseek-free-api之类的转接服务时配置）
+OPENAI_AUTH_TOKEN
 
 # 管理接口密钥（用于 /api/admin/clear-scenes）
 ADMIN_KEY=
