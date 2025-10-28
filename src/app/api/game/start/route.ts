@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { gameEngine } from '@/lib/game-engine'
-import { useGameStore } from '@/lib/store'
+
+export const runtime = 'edge'
 
 export async function POST(request: NextRequest) {
   try {

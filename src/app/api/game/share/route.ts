@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { generateSessionId } from '@/lib/utils'
 
+export const runtime = 'edge'
+
 export async function POST(request: NextRequest) {
   try {
     const { sessionId } = await request.json()

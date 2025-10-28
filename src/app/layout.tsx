@@ -3,6 +3,8 @@ import './globals.css'
 import '../styles/fonts.css'
 import '../styles/animations.css'
 
+export const runtime = 'edge'
+
 export const metadata: Metadata = {
   title: '人生模拟器',
   description: '基于AI的互动式人生体验游戏',

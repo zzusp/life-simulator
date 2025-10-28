@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+export const runtime = 'edge'
+
 export async function POST(request: NextRequest) {
   try {
     // 检查管理员权限（这里简化处理，实际应该验证管理员身份）

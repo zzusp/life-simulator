@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateLifeSummary } from '@/lib/ai'
 
+export const runtime = 'edge'
+
 interface GenerateSummaryRequestBody {
   sessionId: string
   regenerate?: boolean

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { gameEngine } from '@/lib/game-engine'
 import { supabase } from '@/lib/supabase'
 
+export const runtime = 'edge'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }

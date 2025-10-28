@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { gameEngine } from '@/lib/game-engine'
 
+export const runtime = 'edge'
+
 export async function POST(request: NextRequest) {
   try {
     const { sessionId, choiceIndex } = await request.json()

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+export const runtime = 'edge'
+
 export async function GET(request: NextRequest) {
   try {
     // 从数据库获取人生类型数据
